@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { INDIAN_STATES, validateGSTIN } from "@/lib/indian-states";
-import { Plus } from "lucide-react";
+import { Plus, Loader2 } from "lucide-react";
 import { Database } from "@/integrations/supabase/types";
 
 type Company = Database["public"]["Tables"]["companies"]["Row"];
@@ -21,6 +21,7 @@ export default function Companies() {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [fetchingGST, setFetchingGST] = useState(false);
 
   const [form, setForm] = useState({
     name: "", legal_name: "", gstin: "", pan: "",
@@ -35,6 +36,40 @@ export default function Companies() {
   };
 
   useEffect(() => { fetchCompanies(); }, []);
+
+  const handleFetchGST = async () => {
+    if (!form.gstin || form.gstin.length !== 15) {
+      toast({ title: "Enter a valid 15-character GSTIN first", variant: "destructive" });
+      return;
+    }
+    setFetchingGST(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('fetch-gstin', {
+        body: { gstin: form.gstin },
+      });
+      if (error) throw error;
+      if (data?.error) {
+        toast({ title: "GST Lookup Failed", description: data.error, variant: "destructive" });
+        return;
+      }
+      const state = INDIAN_STATES.find(s => s.code === data.state_code);
+      setForm(f => ({
+        ...f,
+        name: data.trade_name || f.name,
+        legal_name: data.legal_name || f.legal_name,
+        address_line1: data.address || f.address_line1,
+        city: data.city || f.city,
+        state_code: state?.code || f.state_code,
+        pincode: data.pincode || f.pincode,
+        pan: data.pan || f.pan,
+      }));
+      toast({ title: "Details fetched from GST portal" });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || "Failed to fetch GST details", variant: "destructive" });
+    } finally {
+      setFetchingGST(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,9 +124,14 @@ export default function Companies() {
                   <Label>Legal Name</Label>
                   <Input value={form.legal_name} onChange={(e) => setForm(f => ({ ...f, legal_name: e.target.value }))} />
                 </div>
-                <div className="space-y-2">
+                <div className="col-span-2 space-y-2">
                   <Label>GSTIN</Label>
-                  <Input value={form.gstin} onChange={(e) => setForm(f => ({ ...f, gstin: e.target.value.toUpperCase() }))} maxLength={15} />
+                  <div className="flex gap-2">
+                    <Input value={form.gstin} onChange={(e) => setForm(f => ({ ...f, gstin: e.target.value.toUpperCase() }))} maxLength={15} placeholder="22AAAAA0000A1Z5" />
+                    <Button type="button" variant="outline" onClick={handleFetchGST} disabled={fetchingGST || form.gstin.length !== 15}>
+                      {fetchingGST ? <Loader2 className="h-4 w-4 animate-spin" /> : "Fetch from GST"}
+                    </Button>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label>PAN</Label>
