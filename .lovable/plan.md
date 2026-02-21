@@ -1,101 +1,134 @@
 
-# GST Sales Invoice & Sales Register Export System
 
-## Phase 1: Foundation & Core Invoicing (Initial Build)
+# Implementation Plan: Super Admin Promotion, Sales Register, PDF Invoice, User Management
 
-### 1. Database Setup (Lovable Cloud)
-- **Companies table**: name, legal name, GSTIN, PAN, address, state/state code, email, mobile, invoice prefix, bank details, signatory name, logo, financial year settings, status
-- **Customers table**: GSTIN, trade/legal name, contact person, billing & shipping address, state/state code, mobile, email, customer type (Registered/Unregistered/Export/SEZ), linked company
-- **Items table**: name, HSN/SAC, unit, GST rate, default price, type (Goods/Services), description, linked company
-- **Invoices table**: company, customer, invoice number, date, place of supply, reverse charge flag, e-way bill, vehicle/LR number, payment terms, due date, status (Draft/Final/Cancelled), discount, round-off, totals
-- **Invoice Items table**: item details, qty, rate, discount, taxable value, CGST/SGST/IGST amounts, total
-- **Invoice Tax Summary table**: rate-wise GST breakup per invoice
-- **Audit Logs table**: user, action, entity, timestamp, details
+This plan covers 4 major features plus the super admin promotion, broken into clear steps.
 
-### 2. Authentication & Roles
-- Email/password login via Supabase Auth
-- **Roles**: Super Admin, Admin, User (stored in separate user_roles table)
-- **User-Company Access table**: maps users to permitted companies with granular permissions (create/edit/cancel invoice, export, view reports)
-- Role-based route protection throughout the app
-- Company-level data isolation via RLS policies
+---
 
-### 3. Company Management (Admin Panel)
-- Create/edit companies with all GST-required fields
-- Logo upload via Supabase Storage
-- Invoice prefix & financial year configuration
-- Activate/deactivate companies
-- Map users to companies with specific permissions
+## 1. Promote First User to Super Admin
 
-### 4. User Management (Admin Panel)
-- Create users with login credentials
-- Assign company access (single or multiple)
-- Set granular permissions per company
-- Activate/deactivate users, reset passwords
+Since no users have signed up yet, we will:
+- Add a database trigger that automatically promotes the **very first user** who signs up to `super_admin` role (instead of the default `user` role)
+- This is a one-time migration -- after the first user signs up, all subsequent users get the default `user` role
+- Alternative: After you sign up, we run a SQL update to promote your account
 
-### 5. Customer Management
-- Customer creation form with GSTIN format validation (15-char alphanumeric pattern)
-- Support for Registered, Unregistered, Export, SEZ customer types
-- Prevent duplicate GSTIN within same company
-- Allow same customer across different companies
-- Search by name, GSTIN, or mobile with autocomplete
+**Approach**: Modify the `handle_new_user` function to check if any users exist. If this is the first user, assign `super_admin` instead of `user`.
 
-### 6. Product/Item Master
-- Create items with HSN/SAC, unit, GST rate, default price
-- Autocomplete search in invoice entry
-- Allow custom line items not in master
+---
 
-### 7. Sales Invoice Creation (Core Feature)
-- **Invoice header**: Auto-populated company details, auto-generated invoice number (with manual override option), date picker (DD-MM-YYYY), customer selection with autocomplete, place of supply, billing/shipping addresses
-- **Line items**: Item search/autocomplete, HSN/SAC, qty, unit, rate, line-wise discount, auto-calculated taxable value and GST
-- **GST Logic**: 
-  - Compare company state code vs customer/place of supply state code
-  - Intra-state → CGST + SGST (split equally)
-  - Inter-state → IGST (full amount)
-  - Support standard GST rates: 0%, 5%, 12%, 18%, 28%
-  - Rate-wise tax summary table
-- **Invoice-level**: Invoice-wise discount, round-off, total in figures and words (Indian number system - lakhs/crores)
-- **Actions**: Save as draft, finalize, edit (with permission check), soft cancel with audit trail, duplicate/copy invoice
+## 2. Sales Register Report Page with Excel Export
 
-### 8. Invoice PDF Generation
-- GST Tax Invoice format on A4 layout
-- Company logo, name, GSTIN, address
-- Customer details and GSTIN
-- Itemized table with HSN, qty, rate, tax breakup
-- Rate-wise tax summary
-- Total in words
-- Declaration text and authorized signatory block
-- Print-friendly design
+**New page**: `src/pages/SalesRegister.tsx`
 
-### 9. Sales Register & Excel Export
-- Filterable report: company, date range, customer, invoice number, GST type (B2B/B2C), status
-- Columns: date, invoice no, customer, GSTIN, state, taxable value, CGST, SGST, IGST, total tax, invoice total, status
-- Summary totals row
-- Grouping by month/customer/tax rate
-- Export to .xlsx with clean formatting for accounting use
-- Option for item-wise detail export
+Features:
+- Company selection (auto-uses selected company from context)
+- Date range filter (from/to date pickers)
+- Customer filter dropdown
+- Status filter (All / Active / Cancelled / Draft)
+- GST type filter (All / B2B / B2C)
 
-### 10. Dashboard
-- Company-wise summary cards: total invoices, total sales, GST collected, pending drafts
-- Recent invoices list
-- Quick action buttons: New Invoice, Add Customer, Export Register
-- Company selector for users with multi-company access
+**Report table columns**:
+Date, Invoice No, Customer Name, GSTIN, State, Taxable Value, CGST, SGST, IGST, Total Tax, Invoice Total, Status
 
-## Phase 2: Advanced Features (Future Iterations)
-- GSTIN auto-fetch API integration
-- GSTR-1 outward supply summary report
-- E-invoice and E-way bill integration placeholders
-- Credit note / Debit note
-- Payment receipt entry and outstanding tracking
-- Financial year locking
-- Email/WhatsApp invoice sharing
-- Dark mode
-- Data backup/restore tools
+**Summary row** at the bottom with column totals
 
-## UI/UX Approach
-- Clean, professional UI suited for CA/accounting offices
-- Desktop-first design, mobile-usable
-- Keyboard-friendly invoice entry (tab navigation, hotkeys)
-- Indian date format (DD-MM-YYYY) and INR (₹) currency formatting
-- Dropdown search/autocomplete for customers and items
-- Responsive tables with sorting and filtering
-- Comprehensive input validations (GSTIN format, mandatory fields, numeric checks, date range checks)
+**Excel export** using the `xlsx` library (SheetJS):
+- Install `xlsx` package
+- Export filtered data as .xlsx with formatted headers, column widths, and summary totals
+- Filename format: `Sales_Register_{CompanyName}_{FromDate}_to_{ToDate}.xlsx`
+
+**Routing**: Add `/sales-register` route and sidebar nav link
+
+---
+
+## 3. PDF Invoice Generation
+
+**Approach**: Use browser's built-in `window.print()` with a dedicated print-optimized invoice view, avoiding heavy PDF library dependencies.
+
+**New components**:
+- `src/components/invoice/InvoicePrintView.tsx` -- A4-formatted GST tax invoice layout
+- `src/pages/InvoiceView.tsx` -- Invoice detail page with Print/Download button
+
+**PDF layout includes**:
+- Company logo (from `company-logos` storage bucket), name, GSTIN, address
+- "TAX INVOICE" header
+- Invoice number, date, place of supply
+- Customer details: name, GSTIN, billing/shipping address
+- Line items table: S.No, Description, HSN/SAC, Qty, Unit, Rate, Discount, Taxable Value, CGST, SGST, IGST, Total
+- Rate-wise tax summary table
+- Total in figures and words (Indian numbering)
+- Bank details for payment
+- Declaration text ("We declare that this invoice shows the actual price...")
+- Authorized signatory block with company signatory name
+- Print CSS for A4 page formatting
+
+**Routing**: Add `/invoices/:id` route; clicking an invoice row navigates to this view
+
+---
+
+## 4. User Management Admin Page
+
+**Full rebuild of** `src/pages/UsersManagement.tsx`
+
+Features:
+- **User list table**: Shows all users (from profiles table), their roles, assigned companies, and status
+- **Create user**: Admin creates a new user by entering email and password (uses Supabase admin invite or signup flow via edge function)
+- **Assign company access**: Multi-select companies for each user with granular permissions:
+  - Can create invoice
+  - Can edit invoice
+  - Can cancel invoice
+  - Can export
+  - Can view reports
+- **Role management**: Set user role (user / admin / super_admin -- super_admin only for super admins)
+- **Activate/deactivate** users
+- **Reset password** capability
+
+**Edge function**: `supabase/functions/manage-users/index.ts`
+- Create new users server-side using the service role key
+- Reset passwords
+- This is needed because client-side cannot create users on behalf of others
+
+**Database**: An admin RLS policy for profiles INSERT is needed so admins can create profiles for new users.
+
+---
+
+## 5. Route & Navigation Updates
+
+- Add "Sales Register" to sidebar nav (under Main section)
+- Add `/sales-register` and `/invoices/:id` routes to App.tsx
+- Update invoice list rows to link to `/invoices/:id`
+
+---
+
+## Technical Details
+
+### New dependencies:
+- `xlsx` (SheetJS) -- for Excel export
+
+### New files:
+| File | Purpose |
+|------|---------|
+| `src/pages/SalesRegister.tsx` | Sales register report with filters and Excel export |
+| `src/pages/InvoiceView.tsx` | Invoice detail view with print/PDF |
+| `src/components/invoice/InvoicePrintView.tsx` | A4 print-optimized invoice layout |
+| `supabase/functions/manage-users/index.ts` | Edge function for admin user creation |
+
+### Modified files:
+| File | Changes |
+|------|---------|
+| `src/App.tsx` | Add new routes |
+| `src/components/layout/AppSidebar.tsx` | Add Sales Register nav link |
+| `src/pages/UsersManagement.tsx` | Complete rebuild with user CRUD |
+| `src/pages/Invoices.tsx` | Link rows to invoice view |
+
+### Database migrations:
+1. Update `handle_new_user()` to promote first user to super_admin
+2. Add admin INSERT policy on profiles (for creating user profiles)
+
+### Execution order:
+1. Database migration (first-user promotion + policies)
+2. Edge function for user management
+3. All frontend pages (can be done in parallel)
+4. Route and navigation updates
+
