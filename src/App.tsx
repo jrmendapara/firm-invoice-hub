@@ -14,6 +14,8 @@ import Customers from "@/pages/Customers";
 import Items from "@/pages/Items";
 import Companies from "@/pages/Companies";
 import UsersManagement from "@/pages/UsersManagement";
+import SalesRegister from "@/pages/SalesRegister";
+import InvoiceView from "@/pages/InvoiceView";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -38,6 +40,8 @@ function ProtectedRoutes() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/invoices" element={<Invoices />} />
           <Route path="/invoices/new" element={<InvoiceCreate />} />
+          <Route path="/invoices/:id" element={<InvoiceView />} />
+          <Route path="/sales-register" element={<SalesRegister />} />
           <Route path="/customers" element={<Customers />} />
           <Route path="/items" element={<Items />} />
           <Route path="/companies" element={<Companies />} />

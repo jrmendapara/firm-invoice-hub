@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/contexts/CompanyContext";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { Plus, Search } from "lucide-react";
 
 export default function Invoices() {
   const { selectedCompany } = useCompany();
+  const navigate = useNavigate();
   const [invoices, setInvoices] = useState<any[]>([]);
   const [search, setSearch] = useState("");
 
@@ -68,7 +69,7 @@ export default function Invoices() {
                 <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground">No invoices found</TableCell></TableRow>
               ) : (
                 filtered.map(inv => (
-                  <TableRow key={inv.id} className="cursor-pointer hover:bg-accent" onClick={() => {}}>
+                  <TableRow key={inv.id} className="cursor-pointer hover:bg-accent" onClick={() => navigate(`/invoices/${inv.id}`)}>
                     <TableCell className="font-medium">{inv.invoice_number}</TableCell>
                     <TableCell>{formatDate(inv.invoice_date)}</TableCell>
                     <TableCell>{inv.customers?.trade_name || "-"}</TableCell>
