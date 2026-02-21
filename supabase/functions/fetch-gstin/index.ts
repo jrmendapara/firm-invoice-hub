@@ -28,31 +28,65 @@ serve(async (req) => {
       );
     }
 
-    // Call GST portal public taxpayer search API
-    const gstUrl = `https://services.gst.gov.in/services/api/search/taxpayerDetails?gstin=${gstin}`;
-    
-    const gstResponse = await fetch(gstUrl, {
-      headers: {
-        'Accept': 'application/json',
-        'User-Agent': 'Mozilla/5.0',
-      },
-    });
+    // Try multiple endpoints
+    const endpoints = [
+      `https://sheet.gstincheck.co.in/check/FREE_KEY/${gstin}`,
+      `https://services.gst.gov.in/services/api/search/taxpayerDetails?gstin=${gstin}`,
+    ];
 
-    if (!gstResponse.ok) {
-      const text = await gstResponse.text();
-      console.error('GST API error:', gstResponse.status, text);
-      return new Response(
-        JSON.stringify({ error: 'GST portal is currently unavailable. Please try again later or enter details manually.' }),
-        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    let gstData: any = null;
+    let lastError = '';
+
+    for (const url of endpoints) {
+      try {
+        console.log('Trying endpoint:', url);
+        const response = await fetch(url, {
+          headers: {
+            'Accept': 'application/json',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          },
+        });
+
+        const text = await response.text();
+        
+        // Check if response is HTML (blocked/captcha)
+        if (text.trim().startsWith('<')) {
+          console.log('Got HTML response from:', url);
+          lastError = 'GST portal returned a non-JSON response (possibly blocked).';
+          continue;
+        }
+
+        try {
+          gstData = JSON.parse(text);
+          if (gstData && !gstData.error && (gstData.tradeNam || gstData.lgnm || gstData.data?.tradeNam || gstData.data?.lgnm)) {
+            // Normalize data if wrapped in .data
+            if (gstData.data) {
+              gstData = gstData.data;
+            }
+            break;
+          }
+          // If the API returned an error object
+          if (gstData.flag === false || gstData.error) {
+            lastError = gstData.message || gstData.error || 'Taxpayer not found.';
+            gstData = null;
+            continue;
+          }
+        } catch (parseErr) {
+          console.log('JSON parse failed for:', url);
+          lastError = 'Failed to parse response.';
+          continue;
+        }
+      } catch (fetchErr) {
+        console.log('Fetch failed for:', url, fetchErr);
+        lastError = 'Network error connecting to GST service.';
+        continue;
+      }
     }
 
-    const gstData = await gstResponse.json();
-
-    if (!gstData || gstData.errorCode) {
+    if (!gstData) {
       return new Response(
-        JSON.stringify({ error: gstData?.errorMessage || 'Taxpayer not found for this GSTIN.' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: lastError || 'Could not fetch GSTIN details. Please enter details manually.' }),
+        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
