@@ -1,7 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, FileText, Users, Package, Building2,
-  Settings, LogOut, ChevronDown,
+  Settings, LogOut, ChevronDown, ClipboardList,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCompany } from "@/contexts/CompanyContext";
@@ -18,6 +18,7 @@ const mainNav = [
   { title: "Invoices", icon: FileText, href: "/invoices" },
   { title: "Customers", icon: Users, href: "/customers" },
   { title: "Items", icon: Package, href: "/items" },
+  { title: "Sales Register", icon: ClipboardList, href: "/sales-register" },
 ];
 
 const adminNav = [
