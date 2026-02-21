@@ -28,86 +28,35 @@ serve(async (req) => {
       );
     }
 
-    // Try multiple endpoints
-    const endpoints = [
-      `https://sheet.gstincheck.co.in/check/FREE_KEY/${gstin}`,
-      `https://services.gst.gov.in/services/api/search/taxpayerDetails?gstin=${gstin}`,
-    ];
-
-    let gstData: any = null;
-    let lastError = '';
-
-    for (const url of endpoints) {
-      try {
-        console.log('Trying endpoint:', url);
-        const response = await fetch(url, {
-          headers: {
-            'Accept': 'application/json',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-          },
-        });
-
-        const text = await response.text();
-        
-        // Check if response is HTML (blocked/captcha)
-        if (text.trim().startsWith('<')) {
-          console.log('Got HTML response from:', url);
-          lastError = 'GST portal returned a non-JSON response (possibly blocked).';
-          continue;
-        }
-
-        try {
-          gstData = JSON.parse(text);
-          if (gstData && !gstData.error && (gstData.tradeNam || gstData.lgnm || gstData.data?.tradeNam || gstData.data?.lgnm)) {
-            // Normalize data if wrapped in .data
-            if (gstData.data) {
-              gstData = gstData.data;
-            }
-            break;
-          }
-          // If the API returned an error object
-          if (gstData.flag === false || gstData.error) {
-            lastError = gstData.message || gstData.error || 'Taxpayer not found.';
-            gstData = null;
-            continue;
-          }
-        } catch (parseErr) {
-          console.log('JSON parse failed for:', url);
-          lastError = 'Failed to parse response.';
-          continue;
-        }
-      } catch (fetchErr) {
-        console.log('Fetch failed for:', url, fetchErr);
-        lastError = 'Network error connecting to GST service.';
-        continue;
-      }
-    }
-
-    if (!gstData) {
-      return new Response(
-        JSON.stringify({ error: lastError || 'Could not fetch GSTIN details. Please enter details manually.' }),
-        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Map response fields
-    const addr = gstData.pradr?.addr || {};
-    const addressParts = [addr.bno, addr.st, addr.loc, addr.flno, addr.bnm].filter(Boolean);
-    const address = addressParts.join(', ');
-
-    const stateCode = String(addr.stcd || gstin.substring(0, 2)).padStart(2, '0');
+    // Extract information directly from GSTIN without external API
+    const stateCode = gstin.substring(0, 2);
     const pan = gstin.substring(2, 12);
 
+    const stateMap: Record<string, string> = {
+      "01": "Jammu & Kashmir", "02": "Himachal Pradesh", "03": "Punjab",
+      "04": "Chandigarh", "05": "Uttarakhand", "06": "Haryana", "07": "Delhi",
+      "08": "Rajasthan", "09": "Uttar Pradesh", "10": "Bihar", "11": "Sikkim",
+      "12": "Arunachal Pradesh", "13": "Nagaland", "14": "Manipur", "15": "Mizoram",
+      "16": "Tripura", "17": "Meghalaya", "18": "Assam", "19": "West Bengal",
+      "20": "Jharkhand", "21": "Odisha", "22": "Chhattisgarh", "23": "Madhya Pradesh",
+      "24": "Gujarat", "25": "Daman & Diu", "26": "Dadra & Nagar Haveli",
+      "27": "Maharashtra", "28": "Andhra Pradesh (Old)", "29": "Karnataka",
+      "30": "Goa", "31": "Lakshadweep", "32": "Kerala", "33": "Tamil Nadu",
+      "34": "Puducherry", "35": "Andaman & Nicobar", "36": "Telangana",
+      "37": "Andhra Pradesh", "38": "Ladakh", "97": "Other Territory",
+    };
+
     const result = {
-      trade_name: gstData.tradeNam || '',
-      legal_name: gstData.lgnm || '',
-      address: address,
-      city: addr.dst || '',
+      trade_name: '',
+      legal_name: '',
+      address: '',
+      city: '',
       state_code: stateCode,
-      pincode: addr.pncd ? String(addr.pncd) : '',
+      state_name: stateMap[stateCode] || '',
+      pincode: '',
       pan: pan,
-      status: gstData.sts || '',
-      business_type: gstData.ctb || '',
+      status: '',
+      business_type: '',
     };
 
     return new Response(
