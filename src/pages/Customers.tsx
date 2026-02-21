@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { INDIAN_STATES, validateGSTIN, getStateFromGSTIN } from "@/lib/indian-states";
-import { Plus, Search, Loader2 } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { Database } from "@/integrations/supabase/types";
 
 type Customer = Database["public"]["Tables"]["customers"]["Row"];
@@ -23,7 +23,7 @@ export default function Customers() {
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [fetchingGST, setFetchingGST] = useState(false);
+  
 
   const [form, setForm] = useState({
     gstin: "", trade_name: "", legal_name: "", contact_person: "",
@@ -44,37 +44,18 @@ export default function Customers() {
 
   useEffect(() => { fetchCustomers(); }, [selectedCompany]);
 
-  const handleFetchGST = async () => {
-    if (!form.gstin || form.gstin.length !== 15) {
+  const handleFetchGST = () => {
+    if (!form.gstin || !validateGSTIN(form.gstin)) {
       toast({ title: "Enter a valid 15-character GSTIN first", variant: "destructive" });
       return;
     }
-    setFetchingGST(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('fetch-gstin', {
-        body: { gstin: form.gstin },
-      });
-      if (error) throw error;
-      if (data?.error) {
-        toast({ title: "GST Lookup Failed", description: data.error, variant: "destructive" });
-        return;
-      }
-      const state = INDIAN_STATES.find(s => s.code === data.state_code);
-      setForm(f => ({
-        ...f,
-        trade_name: data.trade_name || f.trade_name,
-        legal_name: data.legal_name || f.legal_name,
-        billing_address_line1: data.address || f.billing_address_line1,
-        billing_city: data.city || f.billing_city,
-        billing_state_code: state?.code || f.billing_state_code,
-        billing_pincode: data.pincode || f.billing_pincode,
-      }));
-      toast({ title: "Details fetched from GST portal" });
-    } catch (err: any) {
-      toast({ title: "Error", description: err.message || "Failed to fetch GST details", variant: "destructive" });
-    } finally {
-      setFetchingGST(false);
-    }
+    const stateCode = form.gstin.substring(0, 2);
+    const state = INDIAN_STATES.find(s => s.code === stateCode);
+    setForm(f => ({
+      ...f,
+      billing_state_code: state?.code || f.billing_state_code,
+    }));
+    toast({ title: "State extracted from GSTIN" });
   };
 
   const handleGSTINChange = (value: string) => {
@@ -168,8 +149,8 @@ export default function Customers() {
                     <Label>GSTIN</Label>
                     <div className="flex gap-2">
                       <Input value={form.gstin} onChange={(e) => handleGSTINChange(e.target.value)} placeholder="22AAAAA0000A1Z5" maxLength={15} />
-                      <Button type="button" variant="outline" onClick={handleFetchGST} disabled={fetchingGST || form.gstin.length !== 15}>
-                        {fetchingGST ? <Loader2 className="h-4 w-4 animate-spin" /> : "Fetch from GST"}
+                      <Button type="button" variant="outline" onClick={handleFetchGST} disabled={form.gstin.length !== 15}>
+                        Extract Info
                       </Button>
                     </div>
                   </div>
