@@ -1,59 +1,50 @@
 
 
-# GSTIN Auto-Fetch for Company & Customer Creation
+# GSTIN Auto-Fetch Implementation
 
-## Overview
-Add a "Fetch from GST" button on both the Company and Customer creation forms. When you enter a GSTIN and click the button, the system will fetch taxpayer details from the GST portal and auto-fill the form fields.
-
-## How It Works
-
-1. **Backend function** calls the GST portal's taxpayer search API (`https://services.gst.gov.in/services/api/search/taxpayerDetails`) with the GSTIN
-2. The GST portal returns taxpayer details including trade name, legal name, address, state, pincode, and registration status
-3. These details are mapped to the form fields automatically
-
-## Field Mapping (GST Response to Form)
-
-| GST Portal Field | Company Form Field | Customer Form Field |
-|---|---|---|
-| `tradeNam` | Company Name | Trade Name |
-| `lgnm` | Legal Name | Legal Name |
-| `gstin` | GSTIN | GSTIN |
-| `pradr.addr` (building, street, locality) | Address Line 1 | Billing Address |
-| `pradr.addr.dst` | City | Billing City |
-| `pradr.addr.stcd` | State Code | Billing State Code |
-| `pradr.addr.pncd` | Pincode | Billing Pincode |
-| `ctb` (constitution of business) | -- | -- |
-| `sts` (status: Active/Cancelled) | Validation check | Validation check |
-
-PAN is extracted from GSTIN characters 3-12.
+## What This Does
+When you enter a GSTIN number in the Company or Customer creation form and click "Fetch from GST", the system will automatically look up the taxpayer details from the GST portal and fill in the form fields (name, address, city, state, pincode, PAN).
 
 ## Changes
 
-### New Edge Function
-**`supabase/functions/fetch-gstin/index.ts`**
-- Accepts `{ gstin: string }` in POST body
-- Validates GSTIN format
-- Calls GST portal API to fetch taxpayer details
-- Returns structured response with mapped fields
-- Handles errors (invalid GSTIN, API down, taxpayer not found)
+### 1. New Backend Function: `fetch-gstin`
+- Receives a GSTIN, validates the format, and calls the GST portal's public taxpayer search API
+- Returns mapped fields: trade name, legal name, address, city, state code, pincode
+- Handles errors gracefully (invalid GSTIN, portal down, taxpayer not found)
+- No API key needed -- uses the GST portal's public search endpoint
 
-### Modified: `src/pages/Companies.tsx`
-- Add a "Fetch from GST" button next to the GSTIN input field
-- When clicked, calls the edge function and auto-fills: name, legal_name, address, city, state, pincode, PAN
-- Shows loading spinner while fetching
-- Shows error toast if GSTIN not found or API fails
+### 2. Company Form (`Companies.tsx`)
+- Add a "Fetch from GST" button next to the GSTIN input
+- On click: calls the backend function, auto-fills name, legal name, address, city, state, pincode, and PAN (extracted from GSTIN characters 3-12)
+- Shows loading state and error messages via toast notifications
 
-### Modified: `src/pages/Customers.tsx`
-- Add a "Fetch from GST" button next to the GSTIN input field (visible for "Registered" customer type)
-- When clicked, auto-fills: trade_name, legal_name, address, city, state, pincode
-- Same loading/error handling as Companies
+### 3. Customer Form (`Customers.tsx`)
+- Add a "Fetch from GST" button next to the GSTIN input (visible only for "Registered" customer type)
+- On click: auto-fills trade name, legal name, address, city, state, pincode
+- Same loading/error handling
 
-### Updated: `supabase/config.toml`
-- Add `verify_jwt = false` for the new `fetch-gstin` function (auth checked in code)
+### 4. Config Update
+- Register the new `fetch-gstin` function in the backend configuration
 
-## Technical Notes
-- The GST portal's public search API does not require authentication or captcha for basic taxpayer lookup
-- The edge function acts as a proxy to avoid CORS issues (browser cannot call GST portal directly)
-- If the GST portal is temporarily unavailable, the user can still manually enter details
-- The fetched data pre-fills the form but remains editable before saving
+## Technical Details
+
+**Field Mapping from GST Portal Response:**
+
+| GST Portal Field | Maps To |
+|---|---|
+| `tradeNam` | Company Name / Trade Name |
+| `lgnm` | Legal Name |
+| `pradr.addr` (building + street + locality) | Address |
+| `pradr.addr.dst` | City |
+| `pradr.addr.stcd` | State Code |
+| `pradr.addr.pncd` | Pincode |
+| GSTIN chars 3-12 | PAN (Company form only) |
+
+**Files created:**
+- `supabase/functions/fetch-gstin/index.ts`
+
+**Files modified:**
+- `src/pages/Companies.tsx` -- add fetch button + auto-fill logic
+- `src/pages/Customers.tsx` -- add fetch button + auto-fill logic
+- `supabase/config.toml` -- register new function
 
