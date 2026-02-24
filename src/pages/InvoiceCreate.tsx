@@ -96,6 +96,11 @@ export default function InvoiceCreate() {
   };
 
   const selectItem = (lineId: string, itemId: string) => {
+    if (itemId === "__add_new_item__") {
+      navigate("/items");
+      return;
+    }
+
     const item = items.find(i => i.id === itemId);
     if (!item) return;
     updateLine(lineId, {
@@ -106,6 +111,14 @@ export default function InvoiceCreate() {
       rate: item.default_price || 0,
       gst_rate: item.gst_rate,
     });
+  };
+
+  const handleCustomerChange = (value: string) => {
+    if (value === "__add_new_customer__") {
+      navigate("/customers");
+      return;
+    }
+    setCustomerId(value);
   };
 
   // Recalc all lines when inter/intra changes
@@ -238,14 +251,20 @@ export default function InvoiceCreate() {
             </div>
             <div className="space-y-2">
               <Label>Customer *</Label>
-              <Select value={customerId} onValueChange={setCustomerId}>
-                <SelectTrigger className="h-8 rounded-none border-zinc-400 bg-white text-xs"><SelectValue placeholder="Select customer" /></SelectTrigger>
-                <SelectContent>
-                  {customers.map(c => (
-                    <SelectItem key={c.id} value={c.id}>{c.trade_name} {c.gstin ? `(${c.gstin})` : ""}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex items-center gap-2">
+                <Select value={customerId} onValueChange={handleCustomerChange}>
+                  <SelectTrigger className="h-8 rounded-none border-zinc-400 bg-white text-xs"><SelectValue placeholder="Select customer" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__add_new_customer__">+ Add New Customer</SelectItem>
+                    {customers.map(c => (
+                      <SelectItem key={c.id} value={c.id}>{c.trade_name} {c.gstin ? `(${c.gstin})` : ""}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button type="button" variant="outline" className="h-8 rounded-none border-zinc-500 bg-zinc-200 px-2 text-xs" onClick={() => navigate('/customers')}>
+                  + Add
+                </Button>
+              </div>
             </div>
             <div className="space-y-2">
               <Label>Place of Supply *</Label>
@@ -298,12 +317,18 @@ export default function InvoiceCreate() {
               {lines.map(line => (
                 <TableRow key={line.id}>
                   <TableCell>
-                    <Select value={line.item_id || ""} onValueChange={(v) => selectItem(line.id, v)}>
-                      <SelectTrigger className="h-8 rounded-none border-zinc-400 bg-white text-xs"><SelectValue placeholder="Select item" /></SelectTrigger>
-                      <SelectContent>
-                        {items.map(i => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
+                    <div className="flex items-center gap-1">
+                      <Select value={line.item_id || ""} onValueChange={(v) => selectItem(line.id, v)}>
+                        <SelectTrigger className="h-8 rounded-none border-zinc-400 bg-white text-xs"><SelectValue placeholder="Select item" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__add_new_item__">+ Add New Item</SelectItem>
+                          {items.map(i => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <Button type="button" variant="outline" className="h-8 rounded-none border-zinc-500 bg-zinc-200 px-2 text-xs" onClick={() => navigate('/items')}>
+                        +
+                      </Button>
+                    </div>
                   </TableCell>
                   <TableCell><Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" value={line.description} onChange={(e) => updateLine(line.id, { description: e.target.value })} placeholder="Description" /></TableCell>
                   <TableCell><Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" type="number" min="0" value={line.quantity} onChange={(e) => updateLine(line.id, { quantity: parseFloat(e.target.value) || 0 })} /></TableCell>
