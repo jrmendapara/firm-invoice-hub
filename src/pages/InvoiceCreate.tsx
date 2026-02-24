@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { INDIAN_STATES, getCurrentFinancialYear, numberToWordsINR, formatINR } from "@/lib/indian-states";
+import { INDIAN_STATES, GST_RATES, UNITS, getCurrentFinancialYear, numberToWordsINR, formatINR } from "@/lib/indian-states";
 import { Plus, Trash2, Save } from "lucide-react";
 import { Database } from "@/integrations/supabase/types";
 
@@ -59,16 +59,26 @@ export default function InvoiceCreate() {
   const [saving, setSaving] = useState(false);
 
   const [showAddCustomer, setShowAddCustomer] = useState(false);
+  const [newCustomerType, setNewCustomerType] = useState<"registered" | "unregistered" | "export" | "sez">("registered");
   const [newCustomerName, setNewCustomerName] = useState("");
+  const [newCustomerLegalName, setNewCustomerLegalName] = useState("");
+  const [newCustomerContactPerson, setNewCustomerContactPerson] = useState("");
   const [newCustomerGstin, setNewCustomerGstin] = useState("");
+  const [newCustomerAddress, setNewCustomerAddress] = useState("");
+  const [newCustomerCity, setNewCustomerCity] = useState("");
   const [newCustomerStateCode, setNewCustomerStateCode] = useState("");
+  const [newCustomerPincode, setNewCustomerPincode] = useState("");
+  const [newCustomerMobile, setNewCustomerMobile] = useState("");
+  const [newCustomerEmail, setNewCustomerEmail] = useState("");
 
   const [showAddItemForLineId, setShowAddItemForLineId] = useState<string | null>(null);
   const [newItemName, setNewItemName] = useState("");
+  const [newItemType, setNewItemType] = useState<"goods" | "services">("goods");
   const [newItemHsn, setNewItemHsn] = useState("");
   const [newItemRate, setNewItemRate] = useState(0);
   const [newItemGstRate, setNewItemGstRate] = useState(18);
   const [newItemUnit, setNewItemUnit] = useState("Nos");
+  const [newItemDescription, setNewItemDescription] = useState("");
 
   useEffect(() => {
     if (!selectedCompany) return;
@@ -147,17 +157,23 @@ export default function InvoiceCreate() {
     }
 
     const state = INDIAN_STATES.find(s => s.code === newCustomerStateCode);
-    const customerType = newCustomerGstin.trim() ? "registered" : "unregistered";
 
     const { data, error } = await supabase
       .from("customers")
       .insert({
         company_id: selectedCompany.id,
         trade_name: newCustomerName.trim(),
+        legal_name: newCustomerLegalName.trim() || null,
+        contact_person: newCustomerContactPerson.trim() || null,
         gstin: newCustomerGstin.trim() || null,
-        customer_type: customerType,
+        customer_type: newCustomerType,
+        billing_address_line1: newCustomerAddress.trim() || null,
+        billing_city: newCustomerCity.trim() || null,
         billing_state_code: newCustomerStateCode || null,
         billing_state_name: state?.name || null,
+        billing_pincode: newCustomerPincode.trim() || null,
+        mobile: newCustomerMobile.trim() || null,
+        email: newCustomerEmail.trim() || null,
         is_active: true,
       })
       .select()
@@ -171,8 +187,16 @@ export default function InvoiceCreate() {
     setCustomers(prev => [...prev, data].sort((a, b) => a.trade_name.localeCompare(b.trade_name)));
     setCustomerId(data.id);
     setShowAddCustomer(false);
+    setNewCustomerType("registered");
     setNewCustomerName("");
+    setNewCustomerLegalName("");
+    setNewCustomerContactPerson("");
     setNewCustomerGstin("");
+    setNewCustomerAddress("");
+    setNewCustomerCity("");
+    setNewCustomerPincode("");
+    setNewCustomerMobile("");
+    setNewCustomerEmail("");
     toast({ title: "Customer added" });
   };
 
@@ -192,7 +216,8 @@ export default function InvoiceCreate() {
         default_price: newItemRate,
         gst_rate: newItemGstRate,
         unit: newItemUnit || "Nos",
-        item_type: "services",
+        item_type: newItemType,
+        description: newItemDescription.trim() || null,
         is_active: true,
       })
       .select()
@@ -207,10 +232,12 @@ export default function InvoiceCreate() {
     selectItem(lineId, data.id);
     setShowAddItemForLineId(null);
     setNewItemName("");
+    setNewItemType("goods");
     setNewItemHsn("");
     setNewItemRate(0);
     setNewItemGstRate(18);
     setNewItemUnit("Nos");
+    setNewItemDescription("");
     toast({ title: "Item added" });
   };
 
@@ -358,16 +385,41 @@ export default function InvoiceCreate() {
                 </div>
 
                 {showAddCustomer && (
-                  <div className="grid grid-cols-1 gap-2 border border-zinc-400 bg-zinc-100 p-2 md:grid-cols-4">
-                    <Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" placeholder="Customer name" value={newCustomerName} onChange={(e) => setNewCustomerName(e.target.value)} />
-                    <Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" placeholder="GSTIN (optional)" value={newCustomerGstin} onChange={(e) => setNewCustomerGstin(e.target.value)} />
-                    <Select value={newCustomerStateCode} onValueChange={setNewCustomerStateCode}>
-                      <SelectTrigger className="h-8 rounded-none border-zinc-400 bg-white text-xs"><SelectValue placeholder="State" /></SelectTrigger>
-                      <SelectContent>
-                        {INDIAN_STATES.map(s => <SelectItem key={s.code} value={s.code}>{s.code} - {s.name}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <div className="flex gap-1">
+                  <div className="border border-zinc-400 bg-zinc-100 p-2">
+                    <div className="mb-2 grid grid-cols-1 gap-2 md:grid-cols-4">
+                      <Select value={newCustomerType} onValueChange={(v) => setNewCustomerType(v as any)}>
+                        <SelectTrigger className="h-8 rounded-none border-zinc-400 bg-white text-xs"><SelectValue placeholder="Customer Type" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="registered">Registered</SelectItem>
+                          <SelectItem value="unregistered">Unregistered</SelectItem>
+                          <SelectItem value="export">Export</SelectItem>
+                          <SelectItem value="sez">SEZ</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" placeholder="Trade name *" value={newCustomerName} onChange={(e) => setNewCustomerName(e.target.value)} />
+                      <Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" placeholder="Legal name" value={newCustomerLegalName} onChange={(e) => setNewCustomerLegalName(e.target.value)} />
+                      <Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" placeholder="Contact person" value={newCustomerContactPerson} onChange={(e) => setNewCustomerContactPerson(e.target.value)} />
+                    </div>
+
+                    <div className="mb-2 grid grid-cols-1 gap-2 md:grid-cols-3">
+                      <Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" placeholder="GSTIN" value={newCustomerGstin} onChange={(e) => setNewCustomerGstin(e.target.value.toUpperCase())} />
+                      <Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" placeholder="Mobile" value={newCustomerMobile} onChange={(e) => setNewCustomerMobile(e.target.value)} />
+                      <Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" placeholder="Email" type="email" value={newCustomerEmail} onChange={(e) => setNewCustomerEmail(e.target.value)} />
+                    </div>
+
+                    <div className="mb-2 grid grid-cols-1 gap-2 md:grid-cols-4">
+                      <Input className="h-8 rounded-none border-zinc-400 bg-white text-xs md:col-span-2" placeholder="Billing address" value={newCustomerAddress} onChange={(e) => setNewCustomerAddress(e.target.value)} />
+                      <Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" placeholder="City" value={newCustomerCity} onChange={(e) => setNewCustomerCity(e.target.value)} />
+                      <Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" placeholder="Pincode" value={newCustomerPincode} onChange={(e) => setNewCustomerPincode(e.target.value)} />
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <Select value={newCustomerStateCode} onValueChange={setNewCustomerStateCode}>
+                        <SelectTrigger className="h-8 max-w-sm rounded-none border-zinc-400 bg-white text-xs"><SelectValue placeholder="State" /></SelectTrigger>
+                        <SelectContent>
+                          {INDIAN_STATES.map(s => <SelectItem key={s.code} value={s.code}>{s.code} - {s.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
                       <Button type="button" variant="outline" className="h-8 rounded-none border-zinc-500 bg-zinc-200 px-2 text-xs" onClick={handleQuickAddCustomer}>Save</Button>
                       <Button type="button" variant="outline" className="h-8 rounded-none border-zinc-500 bg-zinc-200 px-2 text-xs" onClick={() => setShowAddCustomer(false)}>Cancel</Button>
                     </div>
@@ -437,16 +489,29 @@ export default function InvoiceCreate() {
 
                       {showAddItemForLineId === line.id && (
                         <div className="grid grid-cols-1 gap-1 border border-zinc-400 bg-zinc-100 p-1">
-                          <Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" placeholder="Item name" value={newItemName} onChange={(e) => setNewItemName(e.target.value)} />
-                          <div className="grid grid-cols-4 gap-1">
-                            <Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" placeholder="HSN" value={newItemHsn} onChange={(e) => setNewItemHsn(e.target.value)} />
-                            <Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" type="number" placeholder="Rate" value={newItemRate} onChange={(e) => setNewItemRate(parseFloat(e.target.value) || 0)} />
+                          <Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" placeholder="Item name *" value={newItemName} onChange={(e) => setNewItemName(e.target.value)} />
+                          <div className="grid grid-cols-2 gap-1">
+                            <Select value={newItemType} onValueChange={(v) => setNewItemType(v as "goods" | "services")}>
+                              <SelectTrigger className="h-8 rounded-none border-zinc-400 bg-white text-xs"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="goods">Goods</SelectItem>
+                                <SelectItem value="services">Services</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" placeholder="HSN/SAC" value={newItemHsn} onChange={(e) => setNewItemHsn(e.target.value)} />
+                          </div>
+                          <div className="grid grid-cols-3 gap-1">
+                            <Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" type="number" placeholder="Default Price" value={newItemRate} onChange={(e) => setNewItemRate(parseFloat(e.target.value) || 0)} />
                             <Select value={newItemGstRate.toString()} onValueChange={(v) => setNewItemGstRate(parseFloat(v))}>
                               <SelectTrigger className="h-8 rounded-none border-zinc-400 bg-white text-xs"><SelectValue /></SelectTrigger>
-                              <SelectContent>{[0,5,12,18,28].map(r => <SelectItem key={r} value={r.toString()}>{r}%</SelectItem>)}</SelectContent>
+                              <SelectContent>{GST_RATES.map(r => <SelectItem key={r} value={r.toString()}>{r}%</SelectItem>)}</SelectContent>
                             </Select>
-                            <Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" placeholder="Unit" value={newItemUnit} onChange={(e) => setNewItemUnit(e.target.value)} />
+                            <Select value={newItemUnit} onValueChange={setNewItemUnit}>
+                              <SelectTrigger className="h-8 rounded-none border-zinc-400 bg-white text-xs"><SelectValue /></SelectTrigger>
+                              <SelectContent>{UNITS.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}</SelectContent>
+                            </Select>
                           </div>
+                          <Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" placeholder="Description" value={newItemDescription} onChange={(e) => setNewItemDescription(e.target.value)} />
                           <div className="flex gap-1">
                             <Button type="button" variant="outline" className="h-8 rounded-none border-zinc-500 bg-zinc-200 px-2 text-xs" onClick={() => handleQuickAddItem(line.id)}>Save</Button>
                             <Button type="button" variant="outline" className="h-8 rounded-none border-zinc-500 bg-zinc-200 px-2 text-xs" onClick={() => setShowAddItemForLineId(null)}>Cancel</Button>
