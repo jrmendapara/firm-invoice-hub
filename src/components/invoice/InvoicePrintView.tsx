@@ -8,14 +8,14 @@ interface InvoicePrintViewProps {
   taxSummary: any[];
 }
 
-export function InvoicePrintView({ invoice, company, customer, items, taxSummary }: InvoicePrintViewProps) {
+export function InvoicePrintView({ invoice, company, customer, items }: InvoicePrintViewProps) {
   const isInterState = company.state_code !== invoice.place_of_supply_code;
   const logoUrl = company.logo_url
     ? `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/company-logos/${company.logo_url}`
     : null;
 
   return (
-    <div className="print-invoice mx-auto max-w-[210mm] bg-white p-8 text-black text-[11px] leading-relaxed">
+    <div className="print-invoice mx-auto max-w-[210mm] bg-white p-8 text-[11px] leading-relaxed text-black">
       <style>{`
         @media print {
           @page { size: A4; margin: 10mm; }
@@ -28,9 +28,8 @@ export function InvoicePrintView({ invoice, company, customer, items, taxSummary
         .print-invoice th { background: #f0f0f0; font-weight: 600; text-align: center; }
       `}</style>
 
-      {/* Header */}
       <div className="mb-1 border-2 border-black">
-        <div className="border-b border-black p-3 text-center font-bold text-base">TAX INVOICE</div>
+        <div className="border-b border-black p-3 text-center text-base font-bold">TAX INVOICE</div>
         <div className="grid grid-cols-2">
           <div className="border-r border-black p-3">
             <div className="flex items-start gap-3">
@@ -62,19 +61,18 @@ export function InvoicePrintView({ invoice, company, customer, items, taxSummary
           </div>
         </div>
 
-        {/* Customer Details */}
         <div className="grid grid-cols-2 border-t border-black">
           <div className="border-r border-black p-3">
-            <div className="font-semibold mb-1">Bill To:</div>
+            <div className="mb-1 font-semibold">Bill To:</div>
             <div className="font-bold">{customer.trade_name}</div>
             {customer.legal_name && <div>{customer.legal_name}</div>}
             {customer.billing_address_line1 && <div>{customer.billing_address_line1}</div>}
             {customer.billing_address_line2 && <div>{customer.billing_address_line2}</div>}
             <div>{[customer.billing_city, customer.billing_state_name, customer.billing_pincode].filter(Boolean).join(", ")}</div>
-            {customer.gstin && <div className="font-semibold mt-1">GSTIN: {customer.gstin}</div>}
+            {customer.gstin && <div className="mt-1 font-semibold">GSTIN: {customer.gstin}</div>}
           </div>
           <div className="p-3">
-            <div className="font-semibold mb-1">Ship To:</div>
+            <div className="mb-1 font-semibold">Ship To:</div>
             <div className="font-bold">{customer.trade_name}</div>
             {customer.shipping_address_line1 && <div>{customer.shipping_address_line1}</div>}
             {customer.shipping_address_line2 && <div>{customer.shipping_address_line2}</div>}
@@ -82,24 +80,16 @@ export function InvoicePrintView({ invoice, company, customer, items, taxSummary
           </div>
         </div>
 
-        {/* Line Items Table */}
         <div className="border-t border-black">
           <table>
             <thead>
               <tr>
                 <th className="w-8">S.No</th>
                 <th>Description</th>
-                <th>HSN/SAC</th>
                 <th>Qty</th>
-                <th>Unit</th>
-                <th>Rate (₹)</th>
                 <th>Disc%</th>
                 <th>Taxable (₹)</th>
-                {isInterState ? (
-                  <th>IGST (₹)</th>
-                ) : (
-                  <><th>CGST (₹)</th><th>SGST (₹)</th></>
-                )}
+                {isInterState ? <th>IGST (₹)</th> : <><th>CGST (₹)</th><th>SGST (₹)</th></>}
                 <th>Total (₹)</th>
               </tr>
             </thead>
@@ -108,17 +98,16 @@ export function InvoicePrintView({ invoice, company, customer, items, taxSummary
                 <tr key={item.id}>
                   <td className="text-center">{idx + 1}</td>
                   <td>{item.description}</td>
-                  <td className="text-center">{item.hsn_sac || "-"}</td>
                   <td className="text-center">{item.quantity}</td>
-                  <td className="text-center">{item.unit}</td>
-                  <td className="text-right">{Number(item.rate).toFixed(2)}</td>
                   <td className="text-center">{item.discount_percent > 0 ? `${item.discount_percent}%` : "-"}</td>
                   <td className="text-right">{Number(item.taxable_value).toFixed(2)}</td>
                   {isInterState ? (
                     <td className="text-right">{Number(item.igst_amount).toFixed(2)}</td>
                   ) : (
-                    <><td className="text-right">{Number(item.cgst_amount).toFixed(2)}</td>
-                    <td className="text-right">{Number(item.sgst_amount).toFixed(2)}</td></>
+                    <>
+                      <td className="text-right">{Number(item.cgst_amount).toFixed(2)}</td>
+                      <td className="text-right">{Number(item.sgst_amount).toFixed(2)}</td>
+                    </>
                   )}
                   <td className="text-right">{Number(item.total_amount).toFixed(2)}</td>
                 </tr>
@@ -127,39 +116,6 @@ export function InvoicePrintView({ invoice, company, customer, items, taxSummary
           </table>
         </div>
 
-        {/* Tax Summary */}
-        {taxSummary.length > 0 && (
-          <div className="border-t border-black p-3">
-            <div className="font-semibold mb-1">Tax Summary:</div>
-            <table>
-              <thead>
-                <tr>
-                  <th>GST Rate</th>
-                  <th>Taxable Value (₹)</th>
-                  {isInterState ? <th>IGST (₹)</th> : <><th>CGST (₹)</th><th>SGST (₹)</th></>}
-                  <th>Total Tax (₹)</th>
-                </tr>
-              </thead>
-              <tbody>
-                {taxSummary.map(ts => (
-                  <tr key={ts.id}>
-                    <td className="text-center">{ts.gst_rate}%</td>
-                    <td className="text-right">{Number(ts.taxable_value).toFixed(2)}</td>
-                    {isInterState ? (
-                      <td className="text-right">{Number(ts.igst_amount).toFixed(2)}</td>
-                    ) : (
-                      <><td className="text-right">{Number(ts.cgst_amount).toFixed(2)}</td>
-                      <td className="text-right">{Number(ts.sgst_amount).toFixed(2)}</td></>
-                    )}
-                    <td className="text-right">{Number(ts.total_tax).toFixed(2)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {/* Totals */}
         <div className="grid grid-cols-2 border-t border-black">
           <div className="border-r border-black p-3">
             <div className="font-semibold">Amount in Words:</div>
@@ -177,19 +133,18 @@ export function InvoicePrintView({ invoice, company, customer, items, taxSummary
               {isInterState && <div className="flex justify-between"><span>IGST:</span><span>{formatINR(invoice.total_igst)}</span></div>}
               {invoice.discount_amount > 0 && <div className="flex justify-between"><span>Discount:</span><span>-{formatINR(invoice.discount_amount)}</span></div>}
               {invoice.round_off !== 0 && <div className="flex justify-between"><span>Round Off:</span><span>{formatINR(invoice.round_off)}</span></div>}
-              <div className="flex justify-between border-t border-black pt-1 font-bold text-sm">
+              <div className="flex justify-between border-t border-black pt-1 text-sm font-bold">
                 <span>Grand Total:</span><span>{formatINR(invoice.total_amount)}</span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Bank Details & Signatory */}
         <div className="grid grid-cols-2 border-t border-black">
           <div className="border-r border-black p-3">
             {company.bank_name && (
               <>
-                <div className="font-semibold mb-1">Bank Details:</div>
+                <div className="mb-1 font-semibold">Bank Details:</div>
                 <div>Bank: {company.bank_name}</div>
                 {company.bank_branch && <div>Branch: {company.bank_branch}</div>}
                 {company.bank_account_no && <div>A/c No: {company.bank_account_no}</div>}

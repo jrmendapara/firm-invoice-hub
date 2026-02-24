@@ -99,8 +99,12 @@ export default function InvoiceCreate() {
     const item = items.find(i => i.id === itemId);
     if (!item) return;
     updateLine(lineId, {
-      item_id: itemId, description: item.name, hsn_sac: item.hsn_sac || "",
-      unit: item.unit, rate: item.default_price || 0, gst_rate: item.gst_rate,
+      item_id: itemId,
+      description: item.name,
+      hsn_sac: item.hsn_sac || "",
+      unit: item.unit,
+      rate: item.default_price || 0,
+      gst_rate: item.gst_rate,
     });
   };
 
@@ -272,13 +276,10 @@ export default function InvoiceCreate() {
           <Table className="[&_th]:bg-zinc-200 [&_th]:text-zinc-800 [&_td]:bg-zinc-50 [&_th]:border-zinc-400 [&_td]:border-zinc-300">
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[200px]">Item</TableHead>
-                <TableHead>HSN</TableHead>
+                <TableHead className="w-[220px]">Item</TableHead>
+                <TableHead>Description</TableHead>
                 <TableHead className="w-20">Qty</TableHead>
-                <TableHead className="w-20">Unit</TableHead>
-                <TableHead className="w-24">Rate</TableHead>
                 <TableHead className="w-20">Disc %</TableHead>
-                <TableHead className="w-20">GST %</TableHead>
                 <TableHead className="text-right">Taxable</TableHead>
                 {isInterState ? (
                   <TableHead className="text-right">IGST</TableHead>
@@ -303,17 +304,9 @@ export default function InvoiceCreate() {
                       </SelectContent>
                     </Select>
                   </TableCell>
-                  <TableCell><Input className="h-8 w-20 rounded-none border-zinc-400 bg-white text-xs" value={line.hsn_sac} onChange={(e) => updateLine(line.id, { hsn_sac: e.target.value })} /></TableCell>
+                  <TableCell><Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" value={line.description} onChange={(e) => updateLine(line.id, { description: e.target.value })} placeholder="Description" /></TableCell>
                   <TableCell><Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" type="number" min="0" value={line.quantity} onChange={(e) => updateLine(line.id, { quantity: parseFloat(e.target.value) || 0 })} /></TableCell>
-                  <TableCell><Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" value={line.unit} onChange={(e) => updateLine(line.id, { unit: e.target.value })} /></TableCell>
-                  <TableCell><Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" type="number" min="0" step="0.01" value={line.rate} onChange={(e) => updateLine(line.id, { rate: parseFloat(e.target.value) || 0 })} /></TableCell>
                   <TableCell><Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" type="number" min="0" max="100" value={line.discount_percent} onChange={(e) => updateLine(line.id, { discount_percent: parseFloat(e.target.value) || 0 })} /></TableCell>
-                  <TableCell>
-                    <Select value={line.gst_rate.toString()} onValueChange={(v) => updateLine(line.id, { gst_rate: parseFloat(v) })}>
-                      <SelectTrigger className="h-8 rounded-none border-zinc-400 bg-white text-xs"><SelectValue /></SelectTrigger>
-                      <SelectContent>{[0,5,12,18,28].map(r => <SelectItem key={r} value={r.toString()}>{r}%</SelectItem>)}</SelectContent>
-                    </Select>
-                  </TableCell>
                   <TableCell className="text-right text-xs">{formatINR(line.taxable_value)}</TableCell>
                   {isInterState ? (
                     <TableCell className="text-right text-xs">{formatINR(line.igst)}</TableCell>
