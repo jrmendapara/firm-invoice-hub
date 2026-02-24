@@ -85,7 +85,7 @@ export function InvoicePrintView({ invoice, company, customer, items }: InvoiceP
             <thead>
               <tr>
                 <th className="w-8">S.No</th>
-                <th>Description</th>
+                <th>Item</th>
                 <th>HSN/SAC</th>
                 <th>Qty</th>
                 <th>Unit</th>
@@ -100,7 +100,12 @@ export function InvoicePrintView({ invoice, company, customer, items }: InvoiceP
               {items.map((item, idx) => (
                 <tr key={item.id}>
                   <td className="text-center">{idx + 1}</td>
-                  <td>{item.description}</td>
+                  <td>
+                    <div className="font-medium">{item.items?.name || item.description}</div>
+                    {item.description && (
+                      <div className="text-[10px] text-zinc-700">{item.description}</div>
+                    )}
+                  </td>
                   <td className="text-center">{item.hsn_sac || "-"}</td>
                   <td className="text-center">{item.quantity}</td>
                   <td className="text-center">{item.unit || "-"}</td>

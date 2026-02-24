@@ -24,7 +24,7 @@ export default function InvoiceView() {
       const [compRes, custRes, itemsRes, taxRes] = await Promise.all([
         supabase.from("companies").select("*").eq("id", inv.company_id).single(),
         supabase.from("customers").select("*").eq("id", inv.customer_id).single(),
-        supabase.from("invoice_items").select("*").eq("invoice_id", id).order("sort_order"),
+        supabase.from("invoice_items").select("*, items(name)").eq("invoice_id", id).order("sort_order"),
         supabase.from("invoice_tax_summary").select("*").eq("invoice_id", id).order("gst_rate"),
       ]);
 

@@ -279,6 +279,7 @@ export default function InvoiceCreate() {
                 <TableHead className="w-[220px]">Item</TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead className="w-20">Qty</TableHead>
+                <TableHead className="w-24">Rate</TableHead>
                 <TableHead className="w-20">Disc %</TableHead>
                 <TableHead className="text-right">Taxable</TableHead>
                 {isInterState ? (
@@ -306,6 +307,7 @@ export default function InvoiceCreate() {
                   </TableCell>
                   <TableCell><Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" value={line.description} onChange={(e) => updateLine(line.id, { description: e.target.value })} placeholder="Description" /></TableCell>
                   <TableCell><Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" type="number" min="0" value={line.quantity} onChange={(e) => updateLine(line.id, { quantity: parseFloat(e.target.value) || 0 })} /></TableCell>
+                  <TableCell><Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" type="number" min="0" step="0.01" value={line.rate} onChange={(e) => updateLine(line.id, { rate: parseFloat(e.target.value) || 0 })} /></TableCell>
                   <TableCell><Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" type="number" min="0" max="100" value={line.discount_percent} onChange={(e) => updateLine(line.id, { discount_percent: parseFloat(e.target.value) || 0 })} /></TableCell>
                   <TableCell className="text-right text-xs">{formatINR(line.taxable_value)}</TableCell>
                   {isInterState ? (
