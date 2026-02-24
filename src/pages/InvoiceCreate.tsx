@@ -302,11 +302,6 @@ export default function InvoiceCreate() {
                         {items.map(i => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
-                    {line.description && (
-                      <p className="mt-1 truncate rounded-md bg-muted px-2 py-1 text-[11px] text-muted-foreground">
-                        {line.description}
-                      </p>
-                    )}
                   </TableCell>
                   <TableCell><Input className="h-8 w-20 text-xs" value={line.hsn_sac} onChange={(e) => updateLine(line.id, { hsn_sac: e.target.value })} /></TableCell>
                   <TableCell><Input className="h-8 text-xs" type="number" min="0" value={line.quantity} onChange={(e) => updateLine(line.id, { quantity: parseFloat(e.target.value) || 0 })} /></TableCell>
