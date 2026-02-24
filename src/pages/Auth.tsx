@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { FileText } from "lucide-react";
+import { FileText, ShieldCheck, Sparkles } from "lucide-react";
 
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
@@ -50,70 +50,106 @@ export default function Auth() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-primary">
-            <FileText className="h-7 w-7 text-primary-foreground" />
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-950 px-4 py-10">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -top-24 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-violet-500/25 blur-3xl" />
+        <div className="absolute bottom-0 right-0 h-72 w-72 rounded-full bg-cyan-400/20 blur-3xl" />
+        <div className="absolute bottom-8 left-8 h-52 w-52 rounded-full bg-indigo-500/20 blur-3xl" />
+      </div>
+
+      <div className="relative grid w-full max-w-5xl overflow-hidden rounded-2xl border border-white/15 bg-white/10 shadow-2xl backdrop-blur-xl md:grid-cols-2">
+        <div className="hidden flex-col justify-between bg-gradient-to-br from-slate-900/70 via-violet-800/40 to-cyan-700/30 p-8 text-white md:flex">
+          <div>
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-sm">
+              <Sparkles className="h-4 w-4" />
+              Smart Invoicing for Modern Firms
+            </div>
+            <h1 className="text-3xl font-semibold leading-tight">
+              GST Invoice Manager
+            </h1>
+            <p className="mt-3 text-sm text-white/80">
+              Create GST-compliant invoices, track records, and manage your billing flow in one clean dashboard.
+            </p>
           </div>
-          <CardTitle className="text-2xl font-display">GST Invoice Manager</CardTitle>
-          <CardDescription>
-            {isLogin ? "Sign in to your account" : "Create a new account"}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {!isLogin && (
-              <div className="space-y-2">
-                <Label htmlFor="fullName">Full Name</Label>
-                <Input
-                  id="fullName"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Enter your full name"
-                  required={!isLogin}
-                />
+
+          <div className="space-y-3 text-sm text-white/85">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4" /> Secure authentication with Supabase
+            </div>
+            <div className="flex items-center gap-2">
+              <FileText className="h-4 w-4" /> Professional invoice workflow
+            </div>
+          </div>
+        </div>
+
+        <div className="p-4 sm:p-8">
+          <Card className="border-white/20 bg-white/90 shadow-xl backdrop-blur-sm">
+            <CardHeader className="text-center">
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-primary shadow-lg">
+                <FileText className="h-7 w-7 text-primary-foreground" />
               </div>
-            )}
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-                minLength={6}
-              />
-            </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Please wait..." : isLogin ? "Sign In" : "Sign Up"}
-            </Button>
-          </form>
-          <div className="mt-4 text-center text-sm text-muted-foreground">
-            {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
-            <button
-              type="button"
-              onClick={() => setIsLogin(!isLogin)}
-              className="font-medium text-primary hover:underline"
-            >
-              {isLogin ? "Sign Up" : "Sign In"}
-            </button>
-          </div>
-        </CardContent>
-      </Card>
+              <CardTitle className="text-2xl font-display text-slate-900">
+                {isLogin ? "Welcome back" : "Create account"}
+              </CardTitle>
+              <CardDescription>
+                {isLogin ? "Sign in to continue" : "Get started in less than a minute"}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {!isLogin && (
+                  <div className="space-y-2">
+                    <Label htmlFor="fullName">Full Name</Label>
+                    <Input
+                      id="fullName"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      placeholder="Enter your full name"
+                      required={!isLogin}
+                    />
+                  </div>
+                )}
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    required
+                    minLength={6}
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? "Please wait..." : isLogin ? "Sign In" : "Sign Up"}
+                </Button>
+              </form>
+              <div className="mt-4 text-center text-sm text-muted-foreground">
+                {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
+                <button
+                  type="button"
+                  onClick={() => setIsLogin(!isLogin)}
+                  className="font-medium text-primary hover:underline"
+                >
+                  {isLogin ? "Sign Up" : "Sign In"}
+                </button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }
