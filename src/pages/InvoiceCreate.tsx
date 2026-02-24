@@ -371,61 +371,15 @@ export default function InvoiceCreate() {
             </div>
             <div className="space-y-2">
               <Label>Customer *</Label>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Select value={customerId} onValueChange={handleCustomerChange}>
-                    <SelectTrigger className="h-8 rounded-none border-zinc-400 bg-white text-xs"><SelectValue placeholder="Select customer" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__add_new_customer__">+ Add New Customer</SelectItem>
-                      {customers.map(c => (
-                        <SelectItem key={c.id} value={c.id}>{c.trade_name} {c.gstin ? `(${c.gstin})` : ""}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {showAddCustomer && (
-                  <div className="border border-zinc-400 bg-zinc-100 p-2">
-                    <div className="mb-2 grid grid-cols-1 gap-2 md:grid-cols-4">
-                      <Select value={newCustomerType} onValueChange={(v) => setNewCustomerType(v as any)}>
-                        <SelectTrigger className="h-8 rounded-none border-zinc-400 bg-white text-xs"><SelectValue placeholder="Customer Type" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="registered">Registered</SelectItem>
-                          <SelectItem value="unregistered">Unregistered</SelectItem>
-                          <SelectItem value="export">Export</SelectItem>
-                          <SelectItem value="sez">SEZ</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" placeholder="Trade name *" value={newCustomerName} onChange={(e) => setNewCustomerName(e.target.value)} />
-                      <Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" placeholder="Legal name" value={newCustomerLegalName} onChange={(e) => setNewCustomerLegalName(e.target.value)} />
-                      <Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" placeholder="Contact person" value={newCustomerContactPerson} onChange={(e) => setNewCustomerContactPerson(e.target.value)} />
-                    </div>
-
-                    <div className="mb-2 grid grid-cols-1 gap-2 md:grid-cols-3">
-                      <Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" placeholder="GSTIN" value={newCustomerGstin} onChange={(e) => setNewCustomerGstin(e.target.value.toUpperCase())} />
-                      <Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" placeholder="Mobile" value={newCustomerMobile} onChange={(e) => setNewCustomerMobile(e.target.value)} />
-                      <Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" placeholder="Email" type="email" value={newCustomerEmail} onChange={(e) => setNewCustomerEmail(e.target.value)} />
-                    </div>
-
-                    <div className="mb-2 grid grid-cols-1 gap-2 md:grid-cols-4">
-                      <Input className="h-8 rounded-none border-zinc-400 bg-white text-xs md:col-span-2" placeholder="Billing address" value={newCustomerAddress} onChange={(e) => setNewCustomerAddress(e.target.value)} />
-                      <Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" placeholder="City" value={newCustomerCity} onChange={(e) => setNewCustomerCity(e.target.value)} />
-                      <Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" placeholder="Pincode" value={newCustomerPincode} onChange={(e) => setNewCustomerPincode(e.target.value)} />
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <Select value={newCustomerStateCode} onValueChange={setNewCustomerStateCode}>
-                        <SelectTrigger className="h-8 max-w-sm rounded-none border-zinc-400 bg-white text-xs"><SelectValue placeholder="State" /></SelectTrigger>
-                        <SelectContent>
-                          {INDIAN_STATES.map(s => <SelectItem key={s.code} value={s.code}>{s.code} - {s.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                      <Button type="button" variant="outline" className="h-8 rounded-none border-zinc-500 bg-zinc-200 px-2 text-xs" onClick={handleQuickAddCustomer}>Save</Button>
-                      <Button type="button" variant="outline" className="h-8 rounded-none border-zinc-500 bg-zinc-200 px-2 text-xs" onClick={() => setShowAddCustomer(false)}>Cancel</Button>
-                    </div>
-                  </div>
-                )}
-              </div>
+              <Select value={customerId} onValueChange={handleCustomerChange}>
+                <SelectTrigger className="h-8 rounded-none border-zinc-400 bg-white text-xs"><SelectValue placeholder="Select customer" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__add_new_customer__">+ Add New Customer</SelectItem>
+                  {customers.map(c => (
+                    <SelectItem key={c.id} value={c.id}>{c.trade_name} {c.gstin ? `(${c.gstin})` : ""}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label>Place of Supply *</Label>
@@ -437,6 +391,50 @@ export default function InvoiceCreate() {
               </Select>
             </div>
           </div>
+
+          {showAddCustomer && (
+            <div className="mt-3 border border-zinc-400 bg-zinc-100 p-3">
+              <div className="mb-2 text-sm font-semibold">Add New Customer</div>
+              <div className="mb-3 grid grid-cols-1 gap-2 md:grid-cols-4">
+                <Select value={newCustomerType} onValueChange={(v) => setNewCustomerType(v as any)}>
+                  <SelectTrigger className="h-10 rounded-none border-zinc-400 bg-white text-sm"><SelectValue placeholder="Customer Type" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="registered">Registered</SelectItem>
+                    <SelectItem value="unregistered">Unregistered</SelectItem>
+                    <SelectItem value="export">Export</SelectItem>
+                    <SelectItem value="sez">SEZ</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Input className="h-10 rounded-none border-zinc-400 bg-white text-sm" placeholder="Trade name *" value={newCustomerName} onChange={(e) => setNewCustomerName(e.target.value)} />
+                <Input className="h-10 rounded-none border-zinc-400 bg-white text-sm" placeholder="Legal name" value={newCustomerLegalName} onChange={(e) => setNewCustomerLegalName(e.target.value)} />
+                <Input className="h-10 rounded-none border-zinc-400 bg-white text-sm" placeholder="Contact person" value={newCustomerContactPerson} onChange={(e) => setNewCustomerContactPerson(e.target.value)} />
+              </div>
+
+              <div className="mb-3 grid grid-cols-1 gap-2 md:grid-cols-3">
+                <Input className="h-10 rounded-none border-zinc-400 bg-white text-sm" placeholder="GSTIN" value={newCustomerGstin} onChange={(e) => setNewCustomerGstin(e.target.value.toUpperCase())} />
+                <Input className="h-10 rounded-none border-zinc-400 bg-white text-sm" placeholder="Mobile" value={newCustomerMobile} onChange={(e) => setNewCustomerMobile(e.target.value)} />
+                <Input className="h-10 rounded-none border-zinc-400 bg-white text-sm" placeholder="Email" type="email" value={newCustomerEmail} onChange={(e) => setNewCustomerEmail(e.target.value)} />
+              </div>
+
+              <div className="mb-3 grid grid-cols-1 gap-2 md:grid-cols-4">
+                <Input className="h-10 rounded-none border-zinc-400 bg-white text-sm md:col-span-2" placeholder="Billing address" value={newCustomerAddress} onChange={(e) => setNewCustomerAddress(e.target.value)} />
+                <Input className="h-10 rounded-none border-zinc-400 bg-white text-sm" placeholder="City" value={newCustomerCity} onChange={(e) => setNewCustomerCity(e.target.value)} />
+                <Input className="h-10 rounded-none border-zinc-400 bg-white text-sm" placeholder="Pincode" value={newCustomerPincode} onChange={(e) => setNewCustomerPincode(e.target.value)} />
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <Select value={newCustomerStateCode} onValueChange={setNewCustomerStateCode}>
+                  <SelectTrigger className="h-10 min-w-[280px] rounded-none border-zinc-400 bg-white text-sm"><SelectValue placeholder="State" /></SelectTrigger>
+                  <SelectContent>
+                    {INDIAN_STATES.map(s => <SelectItem key={s.code} value={s.code}>{s.code} - {s.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Button type="button" variant="outline" className="h-10 rounded-none border-zinc-500 bg-zinc-200 px-4 text-sm" onClick={handleQuickAddCustomer}>Save</Button>
+                <Button type="button" variant="outline" className="h-10 rounded-none border-zinc-500 bg-zinc-200 px-4 text-sm" onClick={() => setShowAddCustomer(false)}>Cancel</Button>
+              </div>
+            </div>
+          )}
+
           {isInterState !== undefined && (
             <p className="mt-2 text-sm font-medium text-primary">
               {isInterState ? "⬆️ Inter-State Supply (IGST)" : "🏠 Intra-State Supply (CGST + SGST)"}
@@ -476,9 +474,9 @@ export default function InvoiceCreate() {
             </TableHeader>
             <TableBody>
               {lines.map(line => (
-                <TableRow key={line.id}>
-                  <TableCell>
-                    <div className="space-y-1">
+                <>
+                  <TableRow key={line.id}>
+                    <TableCell>
                       <Select value={line.item_id || ""} onValueChange={(v) => selectItem(line.id, v)}>
                         <SelectTrigger className="h-8 rounded-none border-zinc-400 bg-white text-xs"><SelectValue placeholder="Select item" /></SelectTrigger>
                         <SelectContent>
@@ -486,62 +484,67 @@ export default function InvoiceCreate() {
                           {items.map(i => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}
                         </SelectContent>
                       </Select>
+                    </TableCell>
+                    <TableCell><Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" value={line.description} onChange={(e) => updateLine(line.id, { description: e.target.value })} placeholder="Description" /></TableCell>
+                    <TableCell><Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" type="number" min="0" value={line.quantity} onChange={(e) => updateLine(line.id, { quantity: parseFloat(e.target.value) || 0 })} /></TableCell>
+                    <TableCell><Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" type="number" min="0" step="0.01" value={line.rate} onChange={(e) => updateLine(line.id, { rate: parseFloat(e.target.value) || 0 })} /></TableCell>
+                    <TableCell><Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" type="number" min="0" max="100" value={line.discount_percent} onChange={(e) => updateLine(line.id, { discount_percent: parseFloat(e.target.value) || 0 })} /></TableCell>
+                    <TableCell className="text-right text-xs">{formatINR(line.taxable_value)}</TableCell>
+                    {isInterState ? (
+                      <TableCell className="text-right text-xs">{formatINR(line.igst)}</TableCell>
+                    ) : (
+                      <>
+                        <TableCell className="text-right text-xs">{formatINR(line.cgst)}</TableCell>
+                        <TableCell className="text-right text-xs">{formatINR(line.sgst)}</TableCell>
+                      </>
+                    )}
+                    <TableCell className="text-right font-medium text-xs">{formatINR(line.total)}</TableCell>
+                    <TableCell>
+                      {lines.length > 1 && (
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setLines(lines.filter(l => l.id !== line.id))}>
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
 
-                      {showAddItemForLineId === line.id && (
-                        <div className="grid grid-cols-1 gap-1 border border-zinc-400 bg-zinc-100 p-1">
-                          <Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" placeholder="Item name *" value={newItemName} onChange={(e) => setNewItemName(e.target.value)} />
-                          <div className="grid grid-cols-2 gap-1">
+                  {showAddItemForLineId === line.id && (
+                    <TableRow>
+                      <TableCell colSpan={isInterState ? 9 : 10} className="bg-zinc-100 p-3">
+                        <div className="border border-zinc-400 bg-zinc-50 p-3">
+                          <div className="mb-2 text-sm font-semibold">Add New Item</div>
+                          <div className="mb-2 grid grid-cols-1 gap-2 md:grid-cols-2">
+                            <Input className="h-10 rounded-none border-zinc-400 bg-white text-sm" placeholder="Item name *" value={newItemName} onChange={(e) => setNewItemName(e.target.value)} />
+                            <Input className="h-10 rounded-none border-zinc-400 bg-white text-sm" placeholder="HSN/SAC" value={newItemHsn} onChange={(e) => setNewItemHsn(e.target.value)} />
+                          </div>
+                          <div className="mb-2 grid grid-cols-1 gap-2 md:grid-cols-4">
                             <Select value={newItemType} onValueChange={(v) => setNewItemType(v as "goods" | "services")}>
-                              <SelectTrigger className="h-8 rounded-none border-zinc-400 bg-white text-xs"><SelectValue /></SelectTrigger>
+                              <SelectTrigger className="h-10 rounded-none border-zinc-400 bg-white text-sm"><SelectValue /></SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="goods">Goods</SelectItem>
                                 <SelectItem value="services">Services</SelectItem>
                               </SelectContent>
                             </Select>
-                            <Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" placeholder="HSN/SAC" value={newItemHsn} onChange={(e) => setNewItemHsn(e.target.value)} />
-                          </div>
-                          <div className="grid grid-cols-3 gap-1">
-                            <Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" type="number" placeholder="Default Price" value={newItemRate} onChange={(e) => setNewItemRate(parseFloat(e.target.value) || 0)} />
+                            <Input className="h-10 rounded-none border-zinc-400 bg-white text-sm" type="number" placeholder="Default Price" value={newItemRate} onChange={(e) => setNewItemRate(parseFloat(e.target.value) || 0)} />
                             <Select value={newItemGstRate.toString()} onValueChange={(v) => setNewItemGstRate(parseFloat(v))}>
-                              <SelectTrigger className="h-8 rounded-none border-zinc-400 bg-white text-xs"><SelectValue /></SelectTrigger>
+                              <SelectTrigger className="h-10 rounded-none border-zinc-400 bg-white text-sm"><SelectValue /></SelectTrigger>
                               <SelectContent>{GST_RATES.map(r => <SelectItem key={r} value={r.toString()}>{r}%</SelectItem>)}</SelectContent>
                             </Select>
                             <Select value={newItemUnit} onValueChange={setNewItemUnit}>
-                              <SelectTrigger className="h-8 rounded-none border-zinc-400 bg-white text-xs"><SelectValue /></SelectTrigger>
+                              <SelectTrigger className="h-10 rounded-none border-zinc-400 bg-white text-sm"><SelectValue /></SelectTrigger>
                               <SelectContent>{UNITS.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}</SelectContent>
                             </Select>
                           </div>
-                          <Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" placeholder="Description" value={newItemDescription} onChange={(e) => setNewItemDescription(e.target.value)} />
-                          <div className="flex gap-1">
-                            <Button type="button" variant="outline" className="h-8 rounded-none border-zinc-500 bg-zinc-200 px-2 text-xs" onClick={() => handleQuickAddItem(line.id)}>Save</Button>
-                            <Button type="button" variant="outline" className="h-8 rounded-none border-zinc-500 bg-zinc-200 px-2 text-xs" onClick={() => setShowAddItemForLineId(null)}>Cancel</Button>
+                          <Input className="mb-2 h-10 rounded-none border-zinc-400 bg-white text-sm" placeholder="Description" value={newItemDescription} onChange={(e) => setNewItemDescription(e.target.value)} />
+                          <div className="flex gap-2">
+                            <Button type="button" variant="outline" className="h-10 rounded-none border-zinc-500 bg-zinc-200 px-4 text-sm" onClick={() => handleQuickAddItem(line.id)}>Save</Button>
+                            <Button type="button" variant="outline" className="h-10 rounded-none border-zinc-500 bg-zinc-200 px-4 text-sm" onClick={() => setShowAddItemForLineId(null)}>Cancel</Button>
                           </div>
                         </div>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell><Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" value={line.description} onChange={(e) => updateLine(line.id, { description: e.target.value })} placeholder="Description" /></TableCell>
-                  <TableCell><Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" type="number" min="0" value={line.quantity} onChange={(e) => updateLine(line.id, { quantity: parseFloat(e.target.value) || 0 })} /></TableCell>
-                  <TableCell><Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" type="number" min="0" step="0.01" value={line.rate} onChange={(e) => updateLine(line.id, { rate: parseFloat(e.target.value) || 0 })} /></TableCell>
-                  <TableCell><Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" type="number" min="0" max="100" value={line.discount_percent} onChange={(e) => updateLine(line.id, { discount_percent: parseFloat(e.target.value) || 0 })} /></TableCell>
-                  <TableCell className="text-right text-xs">{formatINR(line.taxable_value)}</TableCell>
-                  {isInterState ? (
-                    <TableCell className="text-right text-xs">{formatINR(line.igst)}</TableCell>
-                  ) : (
-                    <>
-                      <TableCell className="text-right text-xs">{formatINR(line.cgst)}</TableCell>
-                      <TableCell className="text-right text-xs">{formatINR(line.sgst)}</TableCell>
-                    </>
+                      </TableCell>
+                    </TableRow>
                   )}
-                  <TableCell className="text-right font-medium text-xs">{formatINR(line.total)}</TableCell>
-                  <TableCell>
-                    {lines.length > 1 && (
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setLines(lines.filter(l => l.id !== line.id))}>
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    )}
-                  </TableCell>
-                </TableRow>
+                </>
               ))}
             </TableBody>
           </Table>
