@@ -5,13 +5,13 @@ import { Outlet } from "react-router-dom";
 export function AppLayout() {
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full">
+      <div className="flex min-h-screen w-full bg-gradient-to-br from-slate-50 via-background to-blue-50/40">
         <AppSidebar />
         <main className="flex-1 overflow-auto">
-          <div className="flex items-center gap-2 border-b border-border bg-card px-4 py-3">
+          <div className="sticky top-0 z-20 flex items-center gap-2 border-b border-border/70 bg-background/80 px-4 py-3 backdrop-blur-md">
             <SidebarTrigger />
           </div>
-          <div className="p-6">
+          <div className="p-4 md:p-6">
             <Outlet />
           </div>
         </main>

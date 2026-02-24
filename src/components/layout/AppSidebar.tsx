@@ -38,12 +38,12 @@ export function AppSidebar() {
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sidebar-primary">
             <FileText className="h-4 w-4 text-sidebar-primary-foreground" />
           </div>
-          <span className="font-display text-lg text-sidebar-foreground">GST Invoice</span>
+          <span className="font-display text-lg text-sidebar-foreground">GST Invoice Hub</span>
         </div>
         {companies.length > 0 && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="mt-3 flex w-full items-center justify-between rounded-md border border-sidebar-border bg-sidebar-accent px-3 py-2 text-sm text-sidebar-foreground hover:bg-sidebar-accent/80">
+              <button className="mt-3 flex w-full items-center justify-between rounded-lg border border-sidebar-border bg-sidebar-accent/80 px-3 py-2 text-sm text-sidebar-foreground hover:bg-sidebar-accent transition-colors">
                 <span className="truncate">{selectedCompany?.name || "Select Company"}</span>
                 <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
               </button>
