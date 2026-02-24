@@ -86,7 +86,10 @@ export function InvoicePrintView({ invoice, company, customer, items }: InvoiceP
               <tr>
                 <th className="w-8">S.No</th>
                 <th>Description</th>
+                <th>HSN/SAC</th>
                 <th>Qty</th>
+                <th>Unit</th>
+                <th>Rate (₹)</th>
                 <th>Disc%</th>
                 <th>Taxable (₹)</th>
                 {isInterState ? <th>IGST (₹)</th> : <><th>CGST (₹)</th><th>SGST (₹)</th></>}
@@ -98,7 +101,10 @@ export function InvoicePrintView({ invoice, company, customer, items }: InvoiceP
                 <tr key={item.id}>
                   <td className="text-center">{idx + 1}</td>
                   <td>{item.description}</td>
+                  <td className="text-center">{item.hsn_sac || "-"}</td>
                   <td className="text-center">{item.quantity}</td>
+                  <td className="text-center">{item.unit || "-"}</td>
+                  <td className="text-right">{Number(item.rate || 0).toFixed(2)}</td>
                   <td className="text-center">{item.discount_percent > 0 ? `${item.discount_percent}%` : "-"}</td>
                   <td className="text-right">{Number(item.taxable_value).toFixed(2)}</td>
                   {isInterState ? (
