@@ -358,7 +358,7 @@ export default function InvoiceCreate() {
   if (!selectedCompany) return <p className="text-muted-foreground">Please select a company first.</p>;
 
   return (
-    <div className="space-y-3 text-sm">
+    <div className="space-y-3 px-1 text-sm sm:px-0">
       <h1 className="border-b border-zinc-500 bg-zinc-200 px-2 py-1 text-lg font-semibold text-zinc-900">New Invoice Entry</h1>
 
       <Card className="rounded-none border-zinc-500 bg-zinc-100 shadow-none">
@@ -446,12 +446,13 @@ export default function InvoiceCreate() {
       <Card className="rounded-none border-zinc-500 bg-zinc-100 shadow-none">
         <CardHeader className="flex flex-row items-center justify-between border-b border-zinc-400 px-3 py-2">
           <CardTitle className="text-base font-semibold">Line Items</CardTitle>
-          <Button variant="outline" size="sm" className="h-8 rounded-none border-zinc-500 bg-zinc-200 text-xs shadow-none" onClick={() => setLines([...lines, createEmptyLine()])}>
+          <Button variant="outline" size="sm" className="h-9 rounded-none border-zinc-500 bg-zinc-200 px-3 text-xs shadow-none" onClick={() => setLines([...lines, createEmptyLine()])}>
             <Plus className="mr-1 h-3 w-3" />Add Line
           </Button>
         </CardHeader>
         <CardContent className="overflow-x-auto">
-          <Table className="[&_th]:bg-zinc-200 [&_th]:text-zinc-800 [&_td]:bg-zinc-50 [&_th]:border-zinc-400 [&_td]:border-zinc-300">
+          <p className="mb-2 text-xs text-zinc-600 md:hidden">Swipe left/right to view all columns.</p>
+          <Table className="min-w-[980px] [&_th]:bg-zinc-200 [&_th]:text-zinc-800 [&_td]:bg-zinc-50 [&_th]:border-zinc-400 [&_td]:border-zinc-300">
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[220px]">Item</TableHead>
@@ -593,11 +594,11 @@ export default function InvoiceCreate() {
         </CardContent>
       </Card>
 
-      <div className="flex justify-end gap-2 border-t border-zinc-400 pt-2">
-        <Button variant="outline" className="h-8 rounded-none border-zinc-500 bg-zinc-200 text-xs shadow-none" onClick={() => handleSave("draft")} disabled={saving}>
+      <div className="flex flex-col justify-end gap-2 border-t border-zinc-400 pt-2 sm:flex-row">
+        <Button variant="outline" className="h-10 rounded-none border-zinc-500 bg-zinc-200 text-xs shadow-none" onClick={() => handleSave("draft")} disabled={saving}>
           <Save className="mr-1 h-3 w-3" />Save Draft
         </Button>
-        <Button className="h-8 rounded-none bg-zinc-800 px-3 text-xs text-white shadow-none hover:bg-zinc-700" onClick={() => handleSave("final")} disabled={saving}>
+        <Button className="h-10 rounded-none bg-zinc-800 px-3 text-xs text-white shadow-none hover:bg-zinc-700" onClick={() => handleSave("final")} disabled={saving}>
           <Save className="mr-1 h-3 w-3" />Finalize Invoice
         </Button>
       </div>
