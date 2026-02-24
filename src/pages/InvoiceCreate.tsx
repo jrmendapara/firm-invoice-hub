@@ -221,21 +221,21 @@ export default function InvoiceCreate() {
   if (!selectedCompany) return <p className="text-muted-foreground">Please select a company first.</p>;
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-display">New Invoice</h1>
+    <div className="space-y-3 text-sm">
+      <h1 className="border-b border-zinc-500 bg-zinc-200 px-2 py-1 text-lg font-semibold text-zinc-900">New Invoice Entry</h1>
 
-      <Card>
-        <CardHeader><CardTitle>Invoice Details</CardTitle></CardHeader>
+      <Card className="rounded-none border-zinc-500 bg-zinc-100 shadow-none">
+        <CardHeader className="border-b border-zinc-400 px-3 py-2"><CardTitle className="text-base font-semibold">Invoice Details</CardTitle></CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div className="space-y-2">
               <Label>Invoice Date</Label>
-              <Input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} />
+              <Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label>Customer *</Label>
               <Select value={customerId} onValueChange={setCustomerId}>
-                <SelectTrigger><SelectValue placeholder="Select customer" /></SelectTrigger>
+                <SelectTrigger className="h-8 rounded-none border-zinc-400 bg-white text-xs"><SelectValue placeholder="Select customer" /></SelectTrigger>
                 <SelectContent>
                   {customers.map(c => (
                     <SelectItem key={c.id} value={c.id}>{c.trade_name} {c.gstin ? `(${c.gstin})` : ""}</SelectItem>
@@ -246,7 +246,7 @@ export default function InvoiceCreate() {
             <div className="space-y-2">
               <Label>Place of Supply *</Label>
               <Select value={placeOfSupplyCode} onValueChange={setPlaceOfSupplyCode}>
-                <SelectTrigger><SelectValue placeholder="Select state" /></SelectTrigger>
+                <SelectTrigger className="h-8 rounded-none border-zinc-400 bg-white text-xs"><SelectValue placeholder="Select state" /></SelectTrigger>
                 <SelectContent>
                   {INDIAN_STATES.map(s => <SelectItem key={s.code} value={s.code}>{s.code} - {s.name}</SelectItem>)}
                 </SelectContent>
@@ -261,15 +261,15 @@ export default function InvoiceCreate() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Line Items</CardTitle>
-          <Button variant="outline" size="sm" onClick={() => setLines([...lines, createEmptyLine()])}>
-            <Plus className="mr-2 h-4 w-4" />Add Line
+      <Card className="rounded-none border-zinc-500 bg-zinc-100 shadow-none">
+        <CardHeader className="flex flex-row items-center justify-between border-b border-zinc-400 px-3 py-2">
+          <CardTitle className="text-base font-semibold">Line Items</CardTitle>
+          <Button variant="outline" size="sm" className="h-8 rounded-none border-zinc-500 bg-zinc-200 text-xs shadow-none" onClick={() => setLines([...lines, createEmptyLine()])}>
+            <Plus className="mr-1 h-3 w-3" />Add Line
           </Button>
         </CardHeader>
         <CardContent className="overflow-x-auto">
-          <Table>
+          <Table className="[&_th]:bg-zinc-200 [&_th]:text-zinc-800 [&_td]:bg-zinc-50 [&_th]:border-zinc-400 [&_td]:border-zinc-300">
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[200px]">Item</TableHead>
@@ -297,20 +297,20 @@ export default function InvoiceCreate() {
                 <TableRow key={line.id}>
                   <TableCell>
                     <Select value={line.item_id || ""} onValueChange={(v) => selectItem(line.id, v)}>
-                      <SelectTrigger className="h-10 rounded-lg text-xs"><SelectValue placeholder="Select item" /></SelectTrigger>
+                      <SelectTrigger className="h-8 rounded-none border-zinc-400 bg-white text-xs"><SelectValue placeholder="Select item" /></SelectTrigger>
                       <SelectContent>
                         {items.map(i => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </TableCell>
-                  <TableCell><Input className="h-8 w-20 text-xs" value={line.hsn_sac} onChange={(e) => updateLine(line.id, { hsn_sac: e.target.value })} /></TableCell>
-                  <TableCell><Input className="h-8 text-xs" type="number" min="0" value={line.quantity} onChange={(e) => updateLine(line.id, { quantity: parseFloat(e.target.value) || 0 })} /></TableCell>
-                  <TableCell><Input className="h-8 text-xs" value={line.unit} onChange={(e) => updateLine(line.id, { unit: e.target.value })} /></TableCell>
-                  <TableCell><Input className="h-8 text-xs" type="number" min="0" step="0.01" value={line.rate} onChange={(e) => updateLine(line.id, { rate: parseFloat(e.target.value) || 0 })} /></TableCell>
-                  <TableCell><Input className="h-8 text-xs" type="number" min="0" max="100" value={line.discount_percent} onChange={(e) => updateLine(line.id, { discount_percent: parseFloat(e.target.value) || 0 })} /></TableCell>
+                  <TableCell><Input className="h-8 w-20 rounded-none border-zinc-400 bg-white text-xs" value={line.hsn_sac} onChange={(e) => updateLine(line.id, { hsn_sac: e.target.value })} /></TableCell>
+                  <TableCell><Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" type="number" min="0" value={line.quantity} onChange={(e) => updateLine(line.id, { quantity: parseFloat(e.target.value) || 0 })} /></TableCell>
+                  <TableCell><Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" value={line.unit} onChange={(e) => updateLine(line.id, { unit: e.target.value })} /></TableCell>
+                  <TableCell><Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" type="number" min="0" step="0.01" value={line.rate} onChange={(e) => updateLine(line.id, { rate: parseFloat(e.target.value) || 0 })} /></TableCell>
+                  <TableCell><Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" type="number" min="0" max="100" value={line.discount_percent} onChange={(e) => updateLine(line.id, { discount_percent: parseFloat(e.target.value) || 0 })} /></TableCell>
                   <TableCell>
                     <Select value={line.gst_rate.toString()} onValueChange={(v) => updateLine(line.id, { gst_rate: parseFloat(v) })}>
-                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="h-8 rounded-none border-zinc-400 bg-white text-xs"><SelectValue /></SelectTrigger>
                       <SelectContent>{[0,5,12,18,28].map(r => <SelectItem key={r} value={r.toString()}>{r}%</SelectItem>)}</SelectContent>
                     </Select>
                   </TableCell>
@@ -338,8 +338,8 @@ export default function InvoiceCreate() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardContent className="pt-6">
+      <Card className="rounded-none border-zinc-500 bg-zinc-100 shadow-none">
+        <CardContent className="pt-3">
           <div className="flex flex-col items-end gap-2">
             <div className="flex items-center gap-4">
               <span className="text-sm text-muted-foreground">Taxable Value:</span>
@@ -380,12 +380,12 @@ export default function InvoiceCreate() {
         </CardContent>
       </Card>
 
-      <div className="flex justify-end gap-3">
-        <Button variant="outline" onClick={() => handleSave("draft")} disabled={saving}>
-          <Save className="mr-2 h-4 w-4" />Save Draft
+      <div className="flex justify-end gap-2 border-t border-zinc-400 pt-2">
+        <Button variant="outline" className="h-8 rounded-none border-zinc-500 bg-zinc-200 text-xs shadow-none" onClick={() => handleSave("draft")} disabled={saving}>
+          <Save className="mr-1 h-3 w-3" />Save Draft
         </Button>
-        <Button onClick={() => handleSave("final")} disabled={saving}>
-          <Save className="mr-2 h-4 w-4" />Finalize Invoice
+        <Button className="h-8 rounded-none bg-zinc-800 px-3 text-xs text-white shadow-none hover:bg-zinc-700" onClick={() => handleSave("final")} disabled={saving}>
+          <Save className="mr-1 h-3 w-3" />Finalize Invoice
         </Button>
       </div>
     </div>
