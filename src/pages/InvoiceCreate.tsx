@@ -58,6 +58,18 @@ export default function InvoiceCreate() {
   const [roundOff, setRoundOff] = useState(0);
   const [saving, setSaving] = useState(false);
 
+  const [showAddCustomer, setShowAddCustomer] = useState(false);
+  const [newCustomerName, setNewCustomerName] = useState("");
+  const [newCustomerGstin, setNewCustomerGstin] = useState("");
+  const [newCustomerStateCode, setNewCustomerStateCode] = useState("");
+
+  const [showAddItemForLineId, setShowAddItemForLineId] = useState<string | null>(null);
+  const [newItemName, setNewItemName] = useState("");
+  const [newItemHsn, setNewItemHsn] = useState("");
+  const [newItemRate, setNewItemRate] = useState(0);
+  const [newItemGstRate, setNewItemGstRate] = useState(18);
+  const [newItemUnit, setNewItemUnit] = useState("Nos");
+
   useEffect(() => {
     if (!selectedCompany) return;
     Promise.all([
@@ -76,6 +88,12 @@ export default function InvoiceCreate() {
       setPlaceOfSupplyCode(cust.billing_state_code);
     }
   }, [customerId, customers]);
+
+  useEffect(() => {
+    if (selectedCompany?.state_code && !newCustomerStateCode) {
+      setNewCustomerStateCode(selectedCompany.state_code);
+    }
+  }, [selectedCompany, newCustomerStateCode]);
 
   const isInterState = selectedCompany && placeOfSupplyCode && selectedCompany.state_code !== placeOfSupplyCode;
 
@@ -97,7 +115,7 @@ export default function InvoiceCreate() {
 
   const selectItem = (lineId: string, itemId: string) => {
     if (itemId === "__add_new_item__") {
-      navigate("/items");
+      setShowAddItemForLineId(lineId);
       return;
     }
 
@@ -115,10 +133,85 @@ export default function InvoiceCreate() {
 
   const handleCustomerChange = (value: string) => {
     if (value === "__add_new_customer__") {
-      navigate("/customers");
+      setShowAddCustomer(true);
       return;
     }
     setCustomerId(value);
+  };
+
+  const handleQuickAddCustomer = async () => {
+    if (!selectedCompany) return;
+    if (!newCustomerName.trim()) {
+      toast({ title: "Enter customer name", variant: "destructive" });
+      return;
+    }
+
+    const state = INDIAN_STATES.find(s => s.code === newCustomerStateCode);
+    const customerType = newCustomerGstin.trim() ? "registered" : "unregistered";
+
+    const { data, error } = await supabase
+      .from("customers")
+      .insert({
+        company_id: selectedCompany.id,
+        trade_name: newCustomerName.trim(),
+        gstin: newCustomerGstin.trim() || null,
+        customer_type: customerType,
+        billing_state_code: newCustomerStateCode || null,
+        billing_state_name: state?.name || null,
+        is_active: true,
+      })
+      .select()
+      .single();
+
+    if (error || !data) {
+      toast({ title: "Failed to add customer", description: error?.message, variant: "destructive" });
+      return;
+    }
+
+    setCustomers(prev => [...prev, data].sort((a, b) => a.trade_name.localeCompare(b.trade_name)));
+    setCustomerId(data.id);
+    setShowAddCustomer(false);
+    setNewCustomerName("");
+    setNewCustomerGstin("");
+    toast({ title: "Customer added" });
+  };
+
+  const handleQuickAddItem = async (lineId: string) => {
+    if (!selectedCompany) return;
+    if (!newItemName.trim()) {
+      toast({ title: "Enter item name", variant: "destructive" });
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("items")
+      .insert({
+        company_id: selectedCompany.id,
+        name: newItemName.trim(),
+        hsn_sac: newItemHsn.trim() || null,
+        default_price: newItemRate,
+        gst_rate: newItemGstRate,
+        unit: newItemUnit || "Nos",
+        item_type: "services",
+        is_active: true,
+      })
+      .select()
+      .single();
+
+    if (error || !data) {
+      toast({ title: "Failed to add item", description: error?.message, variant: "destructive" });
+      return;
+    }
+
+    setItems(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
+    selectItem(lineId, data.id);
+    setShowAddItemForLineId(null);
+    setNewItemName("");
+    setNewItemHsn("");
+    setNewItemRate(0);
+    setNewItemGstRate(18);
+    setNewItemUnit("Nos");
+    toast({ title: "Item added" });
   };
 
   // Recalc all lines when inter/intra changes
@@ -251,19 +344,35 @@ export default function InvoiceCreate() {
             </div>
             <div className="space-y-2">
               <Label>Customer *</Label>
-              <div className="flex items-center gap-2">
-                <Select value={customerId} onValueChange={handleCustomerChange}>
-                  <SelectTrigger className="h-8 rounded-none border-zinc-400 bg-white text-xs"><SelectValue placeholder="Select customer" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__add_new_customer__">+ Add New Customer</SelectItem>
-                    {customers.map(c => (
-                      <SelectItem key={c.id} value={c.id}>{c.trade_name} {c.gstin ? `(${c.gstin})` : ""}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button type="button" variant="outline" className="h-8 rounded-none border-zinc-500 bg-zinc-200 px-2 text-xs" onClick={() => navigate('/customers')}>
-                  + Add
-                </Button>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Select value={customerId} onValueChange={handleCustomerChange}>
+                    <SelectTrigger className="h-8 rounded-none border-zinc-400 bg-white text-xs"><SelectValue placeholder="Select customer" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__add_new_customer__">+ Add New Customer</SelectItem>
+                      {customers.map(c => (
+                        <SelectItem key={c.id} value={c.id}>{c.trade_name} {c.gstin ? `(${c.gstin})` : ""}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {showAddCustomer && (
+                  <div className="grid grid-cols-1 gap-2 border border-zinc-400 bg-zinc-100 p-2 md:grid-cols-4">
+                    <Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" placeholder="Customer name" value={newCustomerName} onChange={(e) => setNewCustomerName(e.target.value)} />
+                    <Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" placeholder="GSTIN (optional)" value={newCustomerGstin} onChange={(e) => setNewCustomerGstin(e.target.value)} />
+                    <Select value={newCustomerStateCode} onValueChange={setNewCustomerStateCode}>
+                      <SelectTrigger className="h-8 rounded-none border-zinc-400 bg-white text-xs"><SelectValue placeholder="State" /></SelectTrigger>
+                      <SelectContent>
+                        {INDIAN_STATES.map(s => <SelectItem key={s.code} value={s.code}>{s.code} - {s.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <div className="flex gap-1">
+                      <Button type="button" variant="outline" className="h-8 rounded-none border-zinc-500 bg-zinc-200 px-2 text-xs" onClick={handleQuickAddCustomer}>Save</Button>
+                      <Button type="button" variant="outline" className="h-8 rounded-none border-zinc-500 bg-zinc-200 px-2 text-xs" onClick={() => setShowAddCustomer(false)}>Cancel</Button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
             <div className="space-y-2">
@@ -317,7 +426,7 @@ export default function InvoiceCreate() {
               {lines.map(line => (
                 <TableRow key={line.id}>
                   <TableCell>
-                    <div className="flex items-center gap-1">
+                    <div className="space-y-1">
                       <Select value={line.item_id || ""} onValueChange={(v) => selectItem(line.id, v)}>
                         <SelectTrigger className="h-8 rounded-none border-zinc-400 bg-white text-xs"><SelectValue placeholder="Select item" /></SelectTrigger>
                         <SelectContent>
@@ -325,9 +434,25 @@ export default function InvoiceCreate() {
                           {items.map(i => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}
                         </SelectContent>
                       </Select>
-                      <Button type="button" variant="outline" className="h-8 rounded-none border-zinc-500 bg-zinc-200 px-2 text-xs" onClick={() => navigate('/items')}>
-                        +
-                      </Button>
+
+                      {showAddItemForLineId === line.id && (
+                        <div className="grid grid-cols-1 gap-1 border border-zinc-400 bg-zinc-100 p-1">
+                          <Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" placeholder="Item name" value={newItemName} onChange={(e) => setNewItemName(e.target.value)} />
+                          <div className="grid grid-cols-4 gap-1">
+                            <Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" placeholder="HSN" value={newItemHsn} onChange={(e) => setNewItemHsn(e.target.value)} />
+                            <Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" type="number" placeholder="Rate" value={newItemRate} onChange={(e) => setNewItemRate(parseFloat(e.target.value) || 0)} />
+                            <Select value={newItemGstRate.toString()} onValueChange={(v) => setNewItemGstRate(parseFloat(v))}>
+                              <SelectTrigger className="h-8 rounded-none border-zinc-400 bg-white text-xs"><SelectValue /></SelectTrigger>
+                              <SelectContent>{[0,5,12,18,28].map(r => <SelectItem key={r} value={r.toString()}>{r}%</SelectItem>)}</SelectContent>
+                            </Select>
+                            <Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" placeholder="Unit" value={newItemUnit} onChange={(e) => setNewItemUnit(e.target.value)} />
+                          </div>
+                          <div className="flex gap-1">
+                            <Button type="button" variant="outline" className="h-8 rounded-none border-zinc-500 bg-zinc-200 px-2 text-xs" onClick={() => handleQuickAddItem(line.id)}>Save</Button>
+                            <Button type="button" variant="outline" className="h-8 rounded-none border-zinc-500 bg-zinc-200 px-2 text-xs" onClick={() => setShowAddItemForLineId(null)}>Cancel</Button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell><Input className="h-8 rounded-none border-zinc-400 bg-white text-xs" value={line.description} onChange={(e) => updateLine(line.id, { description: e.target.value })} placeholder="Description" /></TableCell>
