@@ -32,15 +32,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(session?.user ?? null);
 
         if (session?.user) {
-          // Fetch roles and profile with setTimeout to avoid deadlock
+          // Fetch roles/profile safely so UI never gets stuck in loading state
           setTimeout(async () => {
-            const [rolesRes, profileRes] = await Promise.all([
-              supabase.from("user_roles").select("role").eq("user_id", session.user.id),
-              supabase.from("profiles").select("full_name, email").eq("user_id", session.user.id).single(),
-            ]);
-            setRoles((rolesRes.data || []).map(r => r.role));
-            setProfile(profileRes.data);
-            setLoading(false);
+            try {
+              const [rolesRes, profileRes] = await Promise.all([
+                supabase.from("user_roles").select("role").eq("user_id", session.user.id),
+                supabase.from("profiles").select("full_name, email").eq("user_id", session.user.id).maybeSingle(),
+              ]);
+
+              setRoles((rolesRes.data || []).map((r) => r.role));
+              setProfile(profileRes.data ?? null);
+            } catch (err) {
+              console.error("AuthContext profile/role fetch failed", err);
+              setRoles([]);
+              setProfile(null);
+            } finally {
+              setLoading(false);
+            }
           }, 0);
         } else {
           setRoles([]);

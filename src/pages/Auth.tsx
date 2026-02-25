@@ -15,23 +15,40 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
+  const withTimeout = async <T,>(promise: Promise<T>, timeoutMs = 15000): Promise<T> => {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error("Login request timed out. Check internet/VPS firewall and try again.")), timeoutMs);
+      promise
+        .then((v) => {
+          clearTimeout(timer);
+          resolve(v);
+        })
+        .catch((err) => {
+          clearTimeout(timer);
+          reject(err);
+        });
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
       if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { error } = await withTimeout(supabase.auth.signInWithPassword({ email, password }));
         if (error) throw error;
       } else {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: { full_name: fullName },
-            emailRedirectTo: window.location.origin,
-          },
-        });
+        const { error } = await withTimeout(
+          supabase.auth.signUp({
+            email,
+            password,
+            options: {
+              data: { full_name: fullName },
+              emailRedirectTo: window.location.origin,
+            },
+          })
+        );
         if (error) throw error;
         toast({
           title: "Account created",
