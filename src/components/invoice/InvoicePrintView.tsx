@@ -10,6 +10,8 @@ interface InvoicePrintViewProps {
 
 export function InvoicePrintView({ invoice, company, customer, items }: InvoicePrintViewProps) {
   const isInterState = company.state_code !== invoice.place_of_supply_code;
+  const minItemRows = 10;
+  const fillerRowCount = Math.max(0, minItemRows - (items?.length || 0));
   const logoUrl = company.logo_url
     ? `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/company-logos/${company.logo_url}`
     : null;
@@ -170,6 +172,22 @@ export function InvoicePrintView({ invoice, company, customer, items }: InvoiceP
                     </>
                   )}
                   <td className="text-right">{Number(item.total_amount).toFixed(2)}</td>
+                </tr>
+              ))}
+
+              {/* Keep item section taller (like traditional invoice forms) */}
+              {Array.from({ length: fillerRowCount }).map((_, i) => (
+                <tr key={`filler-${i}`}>
+                  <td className="text-center">&nbsp;</td>
+                  <td>&nbsp;</td>
+                  <td>&nbsp;</td>
+                  <td>&nbsp;</td>
+                  <td>&nbsp;</td>
+                  <td>&nbsp;</td>
+                  <td>&nbsp;</td>
+                  <td>&nbsp;</td>
+                  {isInterState ? <td>&nbsp;</td> : <><td>&nbsp;</td><td>&nbsp;</td></>}
+                  <td>&nbsp;</td>
                 </tr>
               ))}
             </tbody>
