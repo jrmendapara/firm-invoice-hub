@@ -20,8 +20,21 @@ export function InvoicePrintView({ invoice, company, customer, items }: InvoiceP
         @media print {
           @page { size: A4; margin: 10mm; }
           body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+          /* Print only invoice section */
+          body * { visibility: hidden !important; }
+          .print-invoice, .print-invoice * { visibility: visible !important; }
+          .print-invoice {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            padding: 0 !important;
+            margin: 0 !important;
+            max-width: 100% !important;
+          }
+
           .no-print { display: none !important; }
-          .print-invoice { padding: 0 !important; max-width: 100% !important; }
         }
         .print-invoice table { border-collapse: collapse; width: 100%; }
         .print-invoice th, .print-invoice td { border: 1px solid #333; padding: 4px 6px; }
