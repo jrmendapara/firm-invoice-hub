@@ -137,9 +137,20 @@ export function InvoicePrintView({ invoice, company, customer, items }: InvoiceP
           <div className="p-3">
             <div className="mb-1 font-semibold">Ship To:</div>
             <div className="font-bold">{customer.trade_name}</div>
-            {customer.shipping_address_line1 && <div>{customer.shipping_address_line1}</div>}
-            {customer.shipping_address_line2 && <div>{customer.shipping_address_line2}</div>}
-            <div>{[customer.shipping_city, customer.shipping_state_name, customer.shipping_pincode].filter(Boolean).join(", ")}</div>
+            <div>{customer.shipping_address_line1 || customer.billing_address_line1 || ""}</div>
+            {(customer.shipping_address_line2 || customer.billing_address_line2) && (
+              <div>{customer.shipping_address_line2 || customer.billing_address_line2}</div>
+            )}
+            <div>
+              {[
+                customer.shipping_city || customer.billing_city,
+                customer.shipping_state_name || customer.billing_state_name,
+                customer.shipping_pincode || customer.billing_pincode,
+              ]
+                .filter(Boolean)
+                .join(", ")}
+            </div>
+            {customer.gstin && <div className="mt-1 font-semibold">GSTIN: {customer.gstin}</div>}
           </div>
         </div>
 
