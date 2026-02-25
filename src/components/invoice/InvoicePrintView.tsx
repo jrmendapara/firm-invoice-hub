@@ -98,8 +98,20 @@ export function InvoicePrintView({ invoice, company, customer, items }: InvoiceP
             <div className="grid grid-cols-2 gap-y-1">
               <div className="font-semibold">GSTIN:</div><div>{company.gstin || "N/A"}</div>
               {company.pan && <><div className="font-semibold">PAN:</div><div>{company.pan}</div></>}
-              <div className="font-semibold">Invoice No:</div><div>{invoice.invoice_number}</div>
-              <div className="font-semibold">Date:</div><div>{formatDate(invoice.invoice_date)}</div>
+
+              <div className="font-bold">Invoice No:</div>
+              <div>
+                <span className="inline-block border border-black bg-zinc-100 px-2 py-0.5 text-[12px] font-bold tracking-wide">
+                  {invoice.invoice_number}
+                </span>
+              </div>
+
+              <div className="font-bold">Date:</div>
+              <div>
+                <span className="inline-block border border-black bg-zinc-100 px-2 py-0.5 text-[12px] font-bold">
+                  {formatDate(invoice.invoice_date)}
+                </span>
+              </div>
             </div>
           </div>
           <div className="p-3">
