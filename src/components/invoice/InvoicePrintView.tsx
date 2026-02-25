@@ -15,7 +15,7 @@ export function InvoicePrintView({ invoice, company, customer, items }: InvoiceP
     : null;
 
   return (
-    <div className="print-invoice mx-auto max-w-[210mm] bg-white p-8 text-[11px] leading-relaxed text-black">
+    <div className="print-invoice mx-auto flex min-h-[277mm] max-w-[210mm] flex-col bg-white p-8 text-[11px] leading-relaxed text-black">
       <style>{`
         @media print {
           @page { size: A4; margin: 10mm; }
@@ -60,7 +60,7 @@ export function InvoicePrintView({ invoice, company, customer, items }: InvoiceP
         .print-invoice th { background: #f0f0f0; font-weight: 600; text-align: center; }
       `}</style>
 
-      <div className="mb-1 border-2 border-black">
+      <div className="mb-1 flex flex-1 flex-col border-2 border-black">
         {/* Header style like sample: logo at left + centered firm details at right */}
         <div className="grid grid-cols-[200px_1fr] border-b border-black">
           <div className="flex items-center justify-center border-r border-black p-2">
@@ -200,7 +200,7 @@ export function InvoicePrintView({ invoice, company, customer, items }: InvoiceP
           </div>
         </div>
 
-        <div className="grid grid-cols-2 border-t border-black">
+        <div className="mt-auto grid grid-cols-2 border-t border-black">
           <div className="border-r border-black p-3">
             {company.bank_name && (
               <>
