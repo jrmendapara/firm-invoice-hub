@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { ChangeEvent, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,8 @@ export default function Companies() {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string>("");
   
 
   const [form, setForm] = useState({
@@ -36,6 +38,56 @@ export default function Companies() {
   };
 
   useEffect(() => { fetchCompanies(); }, []);
+
+  const resizeLogo = async (file: File): Promise<Blob> => {
+    const maxWidth = 900;
+    const maxHeight = 300;
+
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = reject;
+      image.src = dataUrl;
+    });
+
+    const scale = Math.min(maxWidth / img.width, maxHeight / img.height, 1);
+    const targetW = Math.max(1, Math.round(img.width * scale));
+    const targetH = Math.max(1, Math.round(img.height * scale));
+
+    const canvas = document.createElement("canvas");
+    canvas.width = targetW;
+    canvas.height = targetH;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Unable to prepare logo canvas");
+
+    ctx.drawImage(img, 0, 0, targetW, targetH);
+
+    return await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (!blob) return reject(new Error("Logo conversion failed"));
+        resolve(blob);
+      }, "image/webp", 0.92);
+    });
+  };
+
+  const handleLogoChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Please select an image file", variant: "destructive" });
+      return;
+    }
+
+    setLogoFile(file);
+    setLogoPreview(URL.createObjectURL(file));
+  };
 
   const handleFetchGST = () => {
     if (!form.gstin || !validateGSTIN(form.gstin)) {
@@ -62,6 +114,29 @@ export default function Companies() {
     setLoading(true);
     const state = INDIAN_STATES.find(s => s.code === form.state_code);
 
+    let uploadedLogoPath: string | null = null;
+    if (logoFile) {
+      try {
+        const resizedLogo = await resizeLogo(logoFile);
+        const fileName = `${Date.now()}-${crypto.randomUUID()}.webp`;
+        const filePath = `company/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("company-logos")
+          .upload(filePath, resizedLogo, {
+            contentType: "image/webp",
+            upsert: true,
+          });
+
+        if (uploadError) throw uploadError;
+        uploadedLogoPath = filePath;
+      } catch (err: any) {
+        setLoading(false);
+        toast({ title: "Logo upload failed", description: err?.message || "Please try another image", variant: "destructive" });
+        return;
+      }
+    }
+
     const { error } = await supabase.from("companies").insert({
       name: form.name, legal_name: form.legal_name || null,
       gstin: form.gstin || null, pan: form.pan || null,
@@ -72,6 +147,7 @@ export default function Companies() {
       signatory_name: form.signatory_name || null,
       bank_name: form.bank_name || null, bank_account_no: form.bank_account_no || null,
       bank_ifsc: form.bank_ifsc || null, bank_branch: form.bank_branch || null,
+      logo_url: uploadedLogoPath,
     });
 
     setLoading(false);
@@ -80,6 +156,8 @@ export default function Companies() {
     } else {
       toast({ title: "Company created" });
       setDialogOpen(false);
+      setLogoFile(null);
+      setLogoPreview("");
       fetchCompanies();
     }
   };
@@ -105,6 +183,14 @@ export default function Companies() {
                 <div className="space-y-2">
                   <Label>Legal Name</Label>
                   <Input value={form.legal_name} onChange={(e) => setForm(f => ({ ...f, legal_name: e.target.value }))} />
+                </div>
+                <div className="col-span-2 space-y-2">
+                  <Label>Company Logo (auto-resize)</Label>
+                  <Input type="file" accept="image/*" onChange={handleLogoChange} />
+                  <p className="text-xs text-muted-foreground">Auto converted to optimized WebP and resized for invoice header.</p>
+                  {logoPreview && (
+                    <img src={logoPreview} alt="Logo preview" className="h-16 w-auto rounded border p-1" />
+                  )}
                 </div>
                 <div className="col-span-2 space-y-2">
                   <Label>GSTIN</Label>
