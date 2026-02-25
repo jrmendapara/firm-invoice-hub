@@ -35,6 +35,25 @@ export function InvoicePrintView({ invoice, company, customer, items }: InvoiceP
           }
 
           .no-print { display: none !important; }
+
+          /* Hide Lovable/editor overlays or injected badges during print */
+          [id*="lovable" i], [class*="lovable" i], [data-lovable], a[href*="lovable.dev"] {
+            display: none !important;
+            visibility: hidden !important;
+          }
+
+          /* Hide any fixed/sticky floating UI that can leak into print */
+          * {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+          .print-invoice *[style*="position: fixed"],
+          .print-invoice *[style*="position:sticky"],
+          .print-invoice .fixed,
+          .print-invoice .sticky {
+            display: none !important;
+            visibility: hidden !important;
+          }
         }
         .print-invoice table { border-collapse: collapse; width: 100%; }
         .print-invoice th, .print-invoice td { border: 1px solid #333; padding: 4px 6px; }
