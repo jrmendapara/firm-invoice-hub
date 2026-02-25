@@ -29,30 +29,47 @@ export function InvoicePrintView({ invoice, company, customer, items }: InvoiceP
       `}</style>
 
       <div className="mb-1 border-2 border-black">
-        <div className="border-b border-black p-3 text-center text-base font-bold">TAX INVOICE</div>
+        {/* Header style like sample: logo at left + centered firm details at right */}
+        <div className="grid grid-cols-[200px_1fr] border-b border-black">
+          <div className="flex items-center justify-center border-r border-black p-2">
+            {logoUrl ? (
+              <img src={logoUrl} alt="Logo" className="h-[100px] w-[170px] rounded-[24px] border border-[#0d7ca6] object-contain p-2" />
+            ) : (
+              <div className="flex h-[100px] w-[170px] items-center justify-center rounded-[24px] border border-[#0d7ca6] text-xs text-zinc-500">
+                LOGO
+              </div>
+            )}
+          </div>
+          <div>
+            <div className="border-b border-black py-2 text-center text-[22px] font-bold tracking-wide uppercase">
+              {company.name}
+            </div>
+            <div className="py-2 text-center text-[12px] font-medium uppercase">
+              {[company.address_line1, company.address_line2, company.city, company.state_name, company.pincode]
+                .filter(Boolean)
+                .join(", ")}
+            </div>
+            <div className="border-t border-black py-1 text-center text-[10px]">
+              {company.mobile ? `Mobile : ${company.mobile}` : ""}
+              {company.mobile && company.email ? " | " : ""}
+              {company.email ? `E-mail : ${company.email}` : ""}
+            </div>
+          </div>
+        </div>
+
+        <div className="border-b border-black p-3 text-center text-base font-bold">Tax Invoice</div>
+
         <div className="grid grid-cols-2">
           <div className="border-r border-black p-3">
-            <div className="flex items-start gap-3">
-              {logoUrl && <img src={logoUrl} alt="Logo" className="h-12 w-12 object-contain" />}
-              <div>
-                <div className="text-lg font-bold">{company.name}</div>
-                {company.legal_name && <div className="text-xs">{company.legal_name}</div>}
-              </div>
+            <div className="grid grid-cols-2 gap-y-1">
+              <div className="font-semibold">GSTIN:</div><div>{company.gstin || "N/A"}</div>
+              {company.pan && <><div className="font-semibold">PAN:</div><div>{company.pan}</div></>}
+              <div className="font-semibold">Invoice No:</div><div>{invoice.invoice_number}</div>
+              <div className="font-semibold">Date:</div><div>{formatDate(invoice.invoice_date)}</div>
             </div>
-            <div className="mt-1">
-              {company.address_line1 && <div>{company.address_line1}</div>}
-              {company.address_line2 && <div>{company.address_line2}</div>}
-              <div>{[company.city, company.state_name, company.pincode].filter(Boolean).join(", ")}</div>
-              {company.email && <div>Email: {company.email}</div>}
-              {company.mobile && <div>Mobile: {company.mobile}</div>}
-            </div>
-            <div className="mt-1 font-semibold">GSTIN: {company.gstin || "N/A"}</div>
-            {company.pan && <div>PAN: {company.pan}</div>}
           </div>
           <div className="p-3">
             <div className="grid grid-cols-2 gap-y-1">
-              <div className="font-semibold">Invoice No:</div><div>{invoice.invoice_number}</div>
-              <div className="font-semibold">Date:</div><div>{formatDate(invoice.invoice_date)}</div>
               <div className="font-semibold">Place of Supply:</div><div>{invoice.place_of_supply_code} - {invoice.place_of_supply_state}</div>
               <div className="font-semibold">Reverse Charge:</div><div>{invoice.is_reverse_charge ? "Yes" : "No"}</div>
               {invoice.eway_bill_number && <><div className="font-semibold">E-Way Bill:</div><div>{invoice.eway_bill_number}</div></>}
