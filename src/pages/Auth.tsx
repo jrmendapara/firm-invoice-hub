@@ -67,7 +67,7 @@ export default function Auth() {
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-950 px-4 py-10">
+    <div className="relative flex min-h-svh items-center justify-center overflow-hidden bg-slate-950 px-4 py-6 sm:py-10">
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute -top-24 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-violet-500/25 blur-3xl" />
         <div className="absolute bottom-0 right-0 h-72 w-72 rounded-full bg-cyan-400/20 blur-3xl" />
@@ -91,7 +91,7 @@ export default function Auth() {
 
           <div className="space-y-3 text-sm text-white/85">
             <div className="flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4" /> Secure authentication with Supabase
+              <ShieldCheck className="h-4 w-4" /> Secure authentication
             </div>
             <div className="flex items-center gap-2">
               <FileText className="h-4 w-4" /> Professional invoice workflow
@@ -101,11 +101,11 @@ export default function Auth() {
 
         <div className="p-4 sm:p-8">
           <Card className="border-white/20 bg-white/90 shadow-xl backdrop-blur-sm">
-            <CardHeader className="text-center">
+            <CardHeader className="text-center px-4 sm:px-6">
               <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-primary shadow-lg">
                 <FileText className="h-7 w-7 text-primary-foreground" />
               </div>
-              <CardTitle className="text-2xl font-display text-slate-900">
+              <CardTitle className="text-xl sm:text-2xl font-display text-slate-900">
                 {isLogin ? "Welcome back" : "Create account"}
               </CardTitle>
               <CardDescription>
