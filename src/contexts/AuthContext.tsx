@@ -58,9 +58,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
+    // Fallback: if onAuthStateChange hasn't fired within 5s, stop loading
+    const fallbackTimer = setTimeout(() => {
+      setLoading((prev) => {
+        if (prev) console.warn("Auth fallback: forcing loading=false");
+        return false;
+      });
+    }, 5000);
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) setLoading(false);
     });
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(fallbackTimer);
+    };
 
     return () => subscription.unsubscribe();
   }, []);
