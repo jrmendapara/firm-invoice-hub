@@ -15,9 +15,9 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  const withTimeout = async <T,>(promise: Promise<T>, timeoutMs = 15000): Promise<T> => {
+  const withTimeout = async <T,>(promise: Promise<T>, timeoutMs = 30000): Promise<T> => {
     return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error("Login request timed out. Check internet/VPS firewall and try again.")), timeoutMs);
+      const timer = setTimeout(() => reject(new Error("Login request timed out. Please check your internet connection and try again.")), timeoutMs);
       promise
         .then((v) => {
           clearTimeout(timer);
@@ -30,24 +30,40 @@ export default function Auth() {
     });
   };
 
+  const withRetry = async <T,>(fn: () => Promise<T>, retries = 2): Promise<T> => {
+    for (let i = 0; i <= retries; i++) {
+      try {
+        return await fn();
+      } catch (err) {
+        if (i === retries) throw err;
+        await new Promise((r) => setTimeout(r, 1000));
+      }
+    }
+    throw new Error("Unexpected retry failure");
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
       if (isLogin) {
-        const { error } = await withTimeout(supabase.auth.signInWithPassword({ email, password }));
+        const { error } = await withRetry(() =>
+          withTimeout(supabase.auth.signInWithPassword({ email, password }))
+        );
         if (error) throw error;
       } else {
-        const { error } = await withTimeout(
-          supabase.auth.signUp({
-            email,
-            password,
-            options: {
-              data: { full_name: fullName },
-              emailRedirectTo: window.location.origin,
-            },
-          })
+        const { error } = await withRetry(() =>
+          withTimeout(
+            supabase.auth.signUp({
+              email,
+              password,
+              options: {
+                data: { full_name: fullName },
+                emailRedirectTo: window.location.origin,
+              },
+            })
+          )
         );
         if (error) throw error;
         toast({
