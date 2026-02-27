@@ -125,7 +125,11 @@ export default function Customers() {
       return;
     }
 
-    const configuredBaseUrl = (import.meta.env.VITE_GST_AUTOMATION_URL || "").trim();
+    const configuredBaseUrl = (
+      localStorage.getItem("gstAutomationUrl") ||
+      import.meta.env.VITE_GST_AUTOMATION_URL ||
+      "https://cool-marked-statutory-acquire.trycloudflare.com"
+    ).trim();
     if (!configuredBaseUrl) {
       toast({
         title: "GST automation URL missing",
