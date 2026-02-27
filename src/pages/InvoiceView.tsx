@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { InvoicePrintView } from "@/components/invoice/InvoicePrintView";
 import { InvoiceMobileView } from "@/components/invoice/InvoiceMobileView";
-import { ArrowLeft, Printer, Share2 } from "lucide-react";
+import { ArrowLeft, Printer, Share2, MessageCircle } from "lucide-react";
 
 export default function InvoiceView() {
   const { id } = useParams<{ id: string }>();
@@ -64,7 +64,6 @@ export default function InvoiceView() {
           await navigator.share(shareData);
           return;
         } catch {
-          // Some browsers/webviews reject title+text+url combo; retry minimal payload
           await navigator.share({ text: url });
           return;
         }
@@ -78,9 +77,15 @@ export default function InvoiceView() {
 
       window.prompt("Copy this invoice link:", url);
     } catch {
-      // Final fallback if share/clipboard is blocked
       window.prompt("Copy this invoice link:", url);
     }
+  };
+
+  const handleWhatsAppShare = () => {
+    const url = window.location.href;
+    const msg = `Invoice ${invoice.invoice_number} - ${company.name}\n${url}`;
+    const waUrl = `https://wa.me/?text=${encodeURIComponent(msg)}`;
+    window.open(waUrl, "_blank", "noopener,noreferrer");
   };
 
   return (
@@ -117,12 +122,15 @@ export default function InvoiceView() {
             <span className="text-muted-foreground">Grand Total</span>
             <span className="font-bold">₹{Number(invoice.total_amount || 0).toFixed(2)}</span>
           </div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             <Button variant="outline" onClick={handleShare}>
-              <Share2 className="mr-2 h-4 w-4" />Share
+              <Share2 className="mr-1 h-4 w-4" />Share
+            </Button>
+            <Button variant="outline" onClick={handleWhatsAppShare}>
+              <MessageCircle className="mr-1 h-4 w-4" />WhatsApp
             </Button>
             <Button onClick={() => window.print()}>
-              <Printer className="mr-2 h-4 w-4" />Print
+              <Printer className="mr-1 h-4 w-4" />Print
             </Button>
           </div>
         </div>
