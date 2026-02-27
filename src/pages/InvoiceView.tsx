@@ -99,17 +99,20 @@ export default function InvoiceView() {
     try {
       const pdfFile = await generateInvoicePdf();
       const nav = navigator as Navigator & { canShare?: (data?: ShareData) => boolean };
+      const shareTitle = `Invoice ${invoice.invoice_number}`;
+      const shareText = `Invoice ${invoice.invoice_number} - ${company.name}`;
 
-      if (nav.share && nav.canShare?.({ files: [pdfFile] })) {
-        await nav.share({
-          files: [pdfFile],
-          title: `Invoice ${invoice.invoice_number}`,
-          text: `Invoice ${invoice.invoice_number} - ${company.name}`,
-        });
-        return;
+      // Try native file share first (best UX on mobile)
+      if (nav.share) {
+        try {
+          await nav.share({ files: [pdfFile], title: shareTitle, text: shareText });
+          return;
+        } catch {
+          // Continue to fallback flow
+        }
       }
 
-      // Fallback: download PDF if file share is not supported by browser/webview
+      // Fallback 1: download file
       const downloadUrl = URL.createObjectURL(pdfFile);
       const a = document.createElement("a");
       a.href = downloadUrl;
@@ -118,7 +121,12 @@ export default function InvoiceView() {
       a.click();
       a.remove();
       URL.revokeObjectURL(downloadUrl);
-      alert("PDF downloaded. Please attach this PDF manually in WhatsApp.");
+
+      // Fallback 2: open WhatsApp with pre-filled message
+      const waText = encodeURIComponent(`${shareText}\n\nPDF downloaded as ${pdfFile.name}. Please attach it in WhatsApp.`);
+      window.open(`https://wa.me/?text=${waText}`, "_blank", "noopener,noreferrer");
+
+      alert("PDF downloaded. WhatsApp opened with message. Please attach the downloaded PDF file.");
     } catch (e: any) {
       alert(e?.message || "Unable to generate/share PDF.");
     } finally {
