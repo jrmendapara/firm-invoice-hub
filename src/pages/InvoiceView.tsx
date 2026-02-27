@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { InvoicePrintView } from "@/components/invoice/InvoicePrintView";
 import { InvoiceMobileView } from "@/components/invoice/InvoiceMobileView";
-import { ArrowLeft, Printer, Share2, MessageCircle } from "lucide-react";
+import { ArrowLeft, Printer, MessageCircle } from "lucide-react";
 
 export default function InvoiceView() {
   const { id } = useParams<{ id: string }>();
@@ -50,37 +50,6 @@ export default function InvoiceView() {
     return <p className="text-muted-foreground">Invoice not found.</p>;
   }
 
-  const handleShare = async () => {
-    const url = window.location.href;
-    const shareData = {
-      title: `Invoice ${invoice.invoice_number}`,
-      text: `Invoice ${invoice.invoice_number} - ${company.name}`,
-      url,
-    };
-
-    try {
-      if (navigator.share) {
-        try {
-          await navigator.share(shareData);
-          return;
-        } catch {
-          await navigator.share({ text: url });
-          return;
-        }
-      }
-
-      if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(url);
-        alert("Invoice link copied to clipboard");
-        return;
-      }
-
-      window.prompt("Copy this invoice link:", url);
-    } catch {
-      window.prompt("Copy this invoice link:", url);
-    }
-  };
-
   const handleWhatsAppShare = () => {
     const url = window.location.href;
     const msg = `Invoice ${invoice.invoice_number} - ${company.name}\n${url}`;
@@ -122,10 +91,7 @@ export default function InvoiceView() {
             <span className="text-muted-foreground">Grand Total</span>
             <span className="font-bold">₹{Number(invoice.total_amount || 0).toFixed(2)}</span>
           </div>
-          <div className="grid grid-cols-3 gap-2">
-            <Button variant="outline" onClick={handleShare}>
-              <Share2 className="mr-1 h-4 w-4" />Share
-            </Button>
+          <div className="grid grid-cols-2 gap-2">
             <Button variant="outline" onClick={handleWhatsAppShare}>
               <MessageCircle className="mr-1 h-4 w-4" />WhatsApp
             </Button>
