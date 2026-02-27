@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { InvoicePrintView } from "@/components/invoice/InvoicePrintView";
 import { InvoiceMobileView } from "@/components/invoice/InvoiceMobileView";
-import { ArrowLeft, Printer } from "lucide-react";
+import { ArrowLeft, Printer, Share2 } from "lucide-react";
 
 export default function InvoiceView() {
   const { id } = useParams<{ id: string }>();
@@ -50,8 +50,27 @@ export default function InvoiceView() {
     return <p className="text-muted-foreground">Invoice not found.</p>;
   }
 
+  const handleShare = async () => {
+    const shareData = {
+      title: `Invoice ${invoice.invoice_number}`,
+      text: `Invoice ${invoice.invoice_number} - ${company.name}`,
+      url: window.location.href,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+        alert("Invoice link copied to clipboard");
+      }
+    } catch {
+      // User cancelled share; ignore
+    }
+  };
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 pb-24 sm:pb-0">
       <div className="no-print flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <Button variant="ghost" asChild>
           <Link to="/invoices"><ArrowLeft className="mr-2 h-4 w-4" />Back to Invoices</Link>
@@ -76,6 +95,23 @@ export default function InvoiceView() {
           items={items}
           taxSummary={taxSummary}
         />
+      </div>
+
+      <div className="fixed bottom-3 left-3 right-3 z-40 sm:hidden print:hidden">
+        <div className="rounded-xl border bg-white/95 p-2 shadow-lg backdrop-blur">
+          <div className="mb-2 flex items-center justify-between px-1 text-sm">
+            <span className="text-muted-foreground">Grand Total</span>
+            <span className="font-bold">₹{Number(invoice.total_amount || 0).toFixed(2)}</span>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <Button variant="outline" onClick={handleShare}>
+              <Share2 className="mr-2 h-4 w-4" />Share
+            </Button>
+            <Button onClick={() => window.print()}>
+              <Printer className="mr-2 h-4 w-4" />Print
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   );
