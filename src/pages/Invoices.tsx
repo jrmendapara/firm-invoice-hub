@@ -1,21 +1,25 @@
-import { useEffect, useState } from "react";
+import { ChangeEvent, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/contexts/CompanyContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { formatINR, formatDate } from "@/lib/indian-states";
-import { Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { formatINR, formatDate, getCurrentFinancialYear, INDIAN_STATES, numberToWordsINR } from "@/lib/indian-states";
+import { Pencil, Plus, Search, Trash2, Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import * as XLSX from "xlsx";
 
 export default function Invoices() {
   const { selectedCompany } = useCompany();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [invoices, setInvoices] = useState<any[]>([]);
   const [search, setSearch] = useState("");
+  const importInputRef = useRef<HTMLInputElement | null>(null);
 
   const fetchInvoices = async () => {
     if (!selectedCompany) return;
@@ -44,6 +48,79 @@ export default function Invoices() {
     fetchInvoices();
   };
 
+  const handleImportInvoices = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedCompany || !user) return;
+
+    try {
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data);
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json<any>(sheet, { defval: "" });
+
+      const { data: customers } = await supabase.from("customers").select("id, trade_name, gstin").eq("company_id", selectedCompany.id);
+      const customerByName = new Map((customers || []).map((c) => [String(c.trade_name || "").toLowerCase(), c.id]));
+      const customerByGstin = new Map((customers || []).filter((c) => c.gstin).map((c) => [String(c.gstin).toUpperCase(), c.id]));
+
+      const inserts = rows
+        .map((r) => {
+          const customerId =
+            customerByGstin.get(String(r.customer_gstin || r.GSTIN || "").toUpperCase()) ||
+            customerByName.get(String(r.customer || r.Customer || r.trade_name || "").toLowerCase());
+          if (!customerId) return null;
+
+          const posCode = String(r.place_of_supply_code || r.pos_code || r.POS || selectedCompany.state_code || "");
+          const posState = INDIAN_STATES.find((s) => s.code === posCode)?.name || String(r.place_of_supply_state || r.pos_state || "") || selectedCompany.state_name;
+          const totalTaxable = Number(r.total_taxable_value || r.taxable || 0);
+          const cgst = Number(r.total_cgst || r.cgst || 0);
+          const sgst = Number(r.total_sgst || r.sgst || 0);
+          const igst = Number(r.total_igst || r.igst || 0);
+          const totalTax = Number(r.total_tax || cgst + sgst + igst);
+          const totalAmount = Number(r.total_amount || r.total || totalTaxable + totalTax);
+          const invoiceDate = String(r.invoice_date || r.Date || new Date().toISOString().slice(0, 10));
+
+          return {
+            company_id: selectedCompany.id,
+            customer_id: customerId,
+            invoice_number: String(r.invoice_number || r["Invoice #"] || "").trim(),
+            invoice_date: invoiceDate,
+            place_of_supply_code: posCode,
+            place_of_supply_state: posState,
+            status: ["draft", "final", "cancelled"].includes(String(r.status || "").toLowerCase())
+              ? String(r.status).toLowerCase()
+              : "final",
+            discount_amount: Number(r.discount_amount || 0),
+            round_off: Number(r.round_off || 0),
+            total_taxable_value: totalTaxable,
+            total_cgst: cgst,
+            total_sgst: sgst,
+            total_igst: igst,
+            total_tax: totalTax,
+            total_amount: totalAmount,
+            amount_in_words: String(r.amount_in_words || numberToWordsINR(totalAmount)),
+            financial_year: String(r.financial_year || getCurrentFinancialYear()),
+            created_by: user.id,
+          };
+        })
+        .filter((r): r is NonNullable<typeof r> => Boolean(r?.invoice_number));
+
+      if (inserts.length === 0) {
+        toast({ title: "No valid rows found", description: "Customer should exist (by name/GSTIN) and invoice_number is required.", variant: "destructive" });
+        return;
+      }
+
+      const { error } = await supabase.from("invoices").insert(inserts);
+      if (error) throw error;
+
+      toast({ title: `Imported ${inserts.length} invoices` });
+      fetchInvoices();
+    } catch (err: any) {
+      toast({ title: "Import failed", description: err?.message || "Invalid Excel format", variant: "destructive" });
+    } finally {
+      if (importInputRef.current) importInputRef.current.value = "";
+    }
+  };
+
   const filtered = invoices.filter(
     (i) => i.invoice_number.toLowerCase().includes(search.toLowerCase()) || (i.customers?.trade_name || "").toLowerCase().includes(search.toLowerCase())
   );
@@ -54,11 +131,17 @@ export default function Invoices() {
     <div className="space-y-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-display">Invoices</h1>
-        <Button asChild>
-          <Link to="/invoices/new">
-            <Plus className="mr-2 h-4 w-4" />New Invoice
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <input ref={importInputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImportInvoices} />
+          <Button variant="outline" onClick={() => importInputRef.current?.click()}>
+            <Upload className="mr-2 h-4 w-4" />Import Excel
+          </Button>
+          <Button asChild>
+            <Link to="/invoices/new">
+              <Plus className="mr-2 h-4 w-4" />New Invoice
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <div className="relative">

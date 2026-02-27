@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { ChangeEvent, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/contexts/CompanyContext";
 import { Button } from "@/components/ui/button";
@@ -10,8 +10,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { GST_RATES, UNITS } from "@/lib/indian-states";
-import { Pencil, Plus, Search } from "lucide-react";
+import { Pencil, Plus, Search, Upload } from "lucide-react";
 import { Database } from "@/integrations/supabase/types";
+import * as XLSX from "xlsx";
 
 type Item = Database["public"]["Tables"]["items"]["Row"];
 
@@ -33,7 +34,7 @@ export default function Items() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
-
+  const importInputRef = useRef<HTMLInputElement | null>(null);
   const [form, setForm] = useState(emptyForm);
 
   const fetchItems = async () => {
@@ -86,8 +87,8 @@ export default function Items() {
       : supabase.from("items").insert({ company_id: selectedCompany.id, ...payload });
 
     const { error } = await query;
-
     setLoading(false);
+
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
@@ -99,6 +100,46 @@ export default function Items() {
     }
   };
 
+  const handleImportItems = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedCompany) return;
+
+    try {
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data);
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json<any>(sheet, { defval: "" });
+
+      const inserts = rows
+        .map((r) => ({
+          company_id: selectedCompany.id,
+          name: String(r.name || r.Name || "").trim(),
+          hsn_sac: String(r.hsn_sac || r.HSN || r["HSN/SAC"] || "").trim() || null,
+          unit: String(r.unit || r.Unit || "Nos").trim() || "Nos",
+          gst_rate: Number(r.gst_rate || r["GST Rate"] || r["GST%"] || 18),
+          default_price: r.default_price === "" ? null : Number(r.default_price || r.Price || 0),
+          item_type: String(r.item_type || r.Type || "goods").toLowerCase() === "services" ? "services" : "goods",
+          description: String(r.description || r.Description || "").trim() || null,
+          is_active: true,
+        }))
+        .filter((r) => r.name);
+
+      if (inserts.length === 0) {
+        toast({ title: "No valid rows found", variant: "destructive" });
+        return;
+      }
+
+      const { error } = await supabase.from("items").insert(inserts);
+      if (error) throw error;
+      toast({ title: `Imported ${inserts.length} items` });
+      fetchItems();
+    } catch (err: any) {
+      toast({ title: "Import failed", description: err?.message || "Invalid Excel format", variant: "destructive" });
+    } finally {
+      if (importInputRef.current) importInputRef.current.value = "";
+    }
+  };
+
   const filtered = items.filter((i) => i.name.toLowerCase().includes(search.toLowerCase()) || (i.hsn_sac || "").includes(search));
 
   if (!selectedCompany) return <p className="text-muted-foreground">Please select a company first.</p>;
@@ -107,67 +148,35 @@ export default function Items() {
     <div className="space-y-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-display">Items / Products</h1>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={openCreate}>
-              <Plus className="mr-2 h-4 w-4" />Add Item
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>{editingItem ? "Edit Item" : "Add Item"}</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label>Item Name *</Label>
-                <Input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} required />
-              </div>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>HSN/SAC</Label>
-                  <Input value={form.hsn_sac} onChange={(e) => setForm((f) => ({ ...f, hsn_sac: e.target.value }))} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Unit</Label>
-                  <Select value={form.unit} onValueChange={(v) => setForm((f) => ({ ...f, unit: v }))}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>{UNITS.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>GST Rate (%)</Label>
-                  <Select value={form.gst_rate} onValueChange={(v) => setForm((f) => ({ ...f, gst_rate: v }))}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>{GST_RATES.map((r) => <SelectItem key={r} value={r.toString()}>{r}%</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Default Price (₹)</Label>
-                  <Input type="number" step="0.01" value={form.default_price} onChange={(e) => setForm((f) => ({ ...f, default_price: e.target.value }))} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Type</Label>
-                  <Select value={form.item_type} onValueChange={(v) => setForm((f) => ({ ...f, item_type: v as "goods" | "services" }))}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="goods">Goods</SelectItem>
-                      <SelectItem value="services">Services</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Saving..." : editingItem ? "Update Item" : "Save Item"}
+        <div className="flex gap-2">
+          <input ref={importInputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImportItems} />
+          <Button variant="outline" onClick={() => importInputRef.current?.click()}>
+            <Upload className="mr-2 h-4 w-4" />Import Excel
+          </Button>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={openCreate}>
+                <Plus className="mr-2 h-4 w-4" />Add Item
               </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>{editingItem ? "Edit Item" : "Add Item"}</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2"><Label>Item Name *</Label><Input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} required /></div>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="space-y-2"><Label>HSN/SAC</Label><Input value={form.hsn_sac} onChange={(e) => setForm((f) => ({ ...f, hsn_sac: e.target.value }))} /></div>
+                  <div className="space-y-2"><Label>Unit</Label><Select value={form.unit} onValueChange={(v) => setForm((f) => ({ ...f, unit: v }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{UNITS.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}</SelectContent></Select></div>
+                  <div className="space-y-2"><Label>GST Rate (%)</Label><Select value={form.gst_rate} onValueChange={(v) => setForm((f) => ({ ...f, gst_rate: v }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{GST_RATES.map((r) => <SelectItem key={r} value={r.toString()}>{r}%</SelectItem>)}</SelectContent></Select></div>
+                  <div className="space-y-2"><Label>Default Price (₹)</Label><Input type="number" step="0.01" value={form.default_price} onChange={(e) => setForm((f) => ({ ...f, default_price: e.target.value }))} /></div>
+                  <div className="space-y-2"><Label>Type</Label><Select value={form.item_type} onValueChange={(v) => setForm((f) => ({ ...f, item_type: v as "goods" | "services" }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="goods">Goods</SelectItem><SelectItem value="services">Services</SelectItem></SelectContent></Select></div>
+                </div>
+                <Button type="submit" className="w-full" disabled={loading}>{loading ? "Saving..." : editingItem ? "Update Item" : "Save Item"}</Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <div className="relative">
@@ -191,11 +200,7 @@ export default function Items() {
             </TableHeader>
             <TableBody>
               {filtered.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground">
-                    No items found
-                  </TableCell>
-                </TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground">No items found</TableCell></TableRow>
               ) : (
                 filtered.map((item) => (
                   <TableRow key={item.id}>
@@ -205,11 +210,7 @@ export default function Items() {
                     <TableCell>{item.gst_rate}%</TableCell>
                     <TableCell>{item.default_price ? `₹${item.default_price}` : "-"}</TableCell>
                     <TableCell className="capitalize">{item.item_type}</TableCell>
-                    <TableCell className="text-right">
-                      <Button size="sm" variant="outline" onClick={() => openEdit(item)}>
-                        <Pencil className="mr-1 h-3.5 w-3.5" /> Edit
-                      </Button>
-                    </TableCell>
+                    <TableCell className="text-right"><Button size="sm" variant="outline" onClick={() => openEdit(item)}><Pencil className="mr-1 h-3.5 w-3.5" /> Edit</Button></TableCell>
                   </TableRow>
                 ))
               )}

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { ChangeEvent, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/contexts/CompanyContext";
 import { Button } from "@/components/ui/button";
@@ -10,8 +10,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { INDIAN_STATES, validateGSTIN, getStateFromGSTIN } from "@/lib/indian-states";
-import { Pencil, Plus, Search } from "lucide-react";
+import { Pencil, Plus, Search, Upload } from "lucide-react";
 import { Database } from "@/integrations/supabase/types";
+import * as XLSX from "xlsx";
 
 type Customer = Database["public"]["Tables"]["customers"]["Row"];
 type CustomerType = Database["public"]["Enums"]["customer_type"];
@@ -38,7 +39,7 @@ export default function Customers() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
-
+  const importInputRef = useRef<HTMLInputElement | null>(null);
   const [form, setForm] = useState(emptyForm);
 
   const fetchCustomers = async () => {
@@ -127,8 +128,8 @@ export default function Customers() {
       : supabase.from("customers").insert({ company_id: selectedCompany.id, ...payload });
 
     const { error } = await query;
-
     setLoading(false);
+
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
@@ -137,6 +138,56 @@ export default function Customers() {
       setEditingCustomer(null);
       setForm(emptyForm);
       fetchCustomers();
+    }
+  };
+
+  const handleImportCustomers = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedCompany) return;
+
+    try {
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data);
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json<any>(sheet, { defval: "" });
+
+      const inserts = rows
+        .map((r) => {
+          const gstin = String(r.gstin || r.GSTIN || "").trim().toUpperCase();
+          const stateCode = String(r.billing_state_code || r.state_code || r.StateCode || "").trim();
+          const state = INDIAN_STATES.find((s) => s.code === stateCode);
+          return {
+            company_id: selectedCompany.id,
+            trade_name: String(r.trade_name || r["Trade Name"] || r.name || r.Name || "").trim(),
+            legal_name: String(r.legal_name || r["Legal Name"] || "").trim() || null,
+            contact_person: String(r.contact_person || r["Contact Person"] || "").trim() || null,
+            gstin: gstin || null,
+            customer_type: (String(r.customer_type || r.Type || (gstin ? "registered" : "unregistered")).toLowerCase() || "unregistered") as CustomerType,
+            billing_address_line1: String(r.billing_address_line1 || r.address || r.Address || "").trim() || null,
+            billing_city: String(r.billing_city || r.city || r.City || "").trim() || null,
+            billing_state_code: stateCode || null,
+            billing_state_name: state?.name || null,
+            billing_pincode: String(r.billing_pincode || r.pincode || r.Pincode || "").trim() || null,
+            mobile: String(r.mobile || r.Mobile || "").trim() || null,
+            email: String(r.email || r.Email || "").trim() || null,
+            is_active: true,
+          };
+        })
+        .filter((r) => r.trade_name);
+
+      if (inserts.length === 0) {
+        toast({ title: "No valid rows found", variant: "destructive" });
+        return;
+      }
+
+      const { error } = await supabase.from("customers").insert(inserts);
+      if (error) throw error;
+      toast({ title: `Imported ${inserts.length} customers` });
+      fetchCustomers();
+    } catch (err: any) {
+      toast({ title: "Import failed", description: err?.message || "Invalid Excel format", variant: "destructive" });
+    } finally {
+      if (importInputRef.current) importInputRef.current.value = "";
     }
   };
 
@@ -150,89 +201,66 @@ export default function Customers() {
     <div className="space-y-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-display">Customers</h1>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={openCreate}>
-              <Plus className="mr-2 h-4 w-4" />Add Customer
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{editingCustomer ? "Edit Customer" : "Add Customer"}</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div className="md:col-span-2 space-y-2">
-                  <Label>Customer Type</Label>
-                  <Select value={form.customer_type} onValueChange={(v) => setForm((f) => ({ ...f, customer_type: v as CustomerType }))}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="registered">Registered</SelectItem>
-                      <SelectItem value="unregistered">Unregistered</SelectItem>
-                      <SelectItem value="export">Export</SelectItem>
-                      <SelectItem value="sez">SEZ</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {form.customer_type === "registered" && (
-                  <div className="md:col-span-2 space-y-2">
-                    <Label>GSTIN</Label>
-                    <div className="flex gap-2">
-                      <Input value={form.gstin} onChange={(e) => handleGSTINChange(e.target.value)} placeholder="22AAAAA0000A1Z5" maxLength={15} />
-                      <Button type="button" variant="outline" onClick={handleFetchGST} disabled={form.gstin.length !== 15}>
-                        Extract Info
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                <div className="md:col-span-2 space-y-2">
-                  <Label>Trade Name *</Label>
-                  <Input value={form.trade_name} onChange={(e) => setForm((f) => ({ ...f, trade_name: e.target.value }))} required />
-                </div>
-                <div className="space-y-2">
-                  <Label>Legal Name</Label>
-                  <Input value={form.legal_name} onChange={(e) => setForm((f) => ({ ...f, legal_name: e.target.value }))} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Contact Person</Label>
-                  <Input value={form.contact_person} onChange={(e) => setForm((f) => ({ ...f, contact_person: e.target.value }))} />
-                </div>
-                <div className="md:col-span-2 space-y-2">
-                  <Label>Address</Label>
-                  <Input value={form.billing_address_line1} onChange={(e) => setForm((f) => ({ ...f, billing_address_line1: e.target.value }))} />
-                </div>
-                <div className="space-y-2">
-                  <Label>City</Label>
-                  <Input value={form.billing_city} onChange={(e) => setForm((f) => ({ ...f, billing_city: e.target.value }))} />
-                </div>
-                <div className="space-y-2">
-                  <Label>State</Label>
-                  <Select value={form.billing_state_code} onValueChange={(v) => setForm((f) => ({ ...f, billing_state_code: v }))}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select state" />
-                    </SelectTrigger>
-                    <SelectContent>{INDIAN_STATES.map((s) => <SelectItem key={s.code} value={s.code}>{s.code} - {s.name}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Mobile</Label>
-                  <Input value={form.mobile} onChange={(e) => setForm((f) => ({ ...f, mobile: e.target.value }))} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Email</Label>
-                  <Input type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
-                </div>
-              </div>
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Saving..." : editingCustomer ? "Update Customer" : "Save Customer"}
+        <div className="flex gap-2">
+          <input ref={importInputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImportCustomers} />
+          <Button variant="outline" onClick={() => importInputRef.current?.click()}>
+            <Upload className="mr-2 h-4 w-4" />Import Excel
+          </Button>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={openCreate}>
+                <Plus className="mr-2 h-4 w-4" />Add Customer
               </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>{editingCustomer ? "Edit Customer" : "Add Customer"}</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="md:col-span-2 space-y-2">
+                    <Label>Customer Type</Label>
+                    <Select value={form.customer_type} onValueChange={(v) => setForm((f) => ({ ...f, customer_type: v as CustomerType }))}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="registered">Registered</SelectItem>
+                        <SelectItem value="unregistered">Unregistered</SelectItem>
+                        <SelectItem value="export">Export</SelectItem>
+                        <SelectItem value="sez">SEZ</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {form.customer_type === "registered" && (
+                    <div className="md:col-span-2 space-y-2">
+                      <Label>GSTIN</Label>
+                      <div className="flex gap-2">
+                        <Input value={form.gstin} onChange={(e) => handleGSTINChange(e.target.value)} placeholder="22AAAAA0000A1Z5" maxLength={15} />
+                        <Button type="button" variant="outline" onClick={handleFetchGST} disabled={form.gstin.length !== 15}>Extract Info</Button>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="md:col-span-2 space-y-2"><Label>Trade Name *</Label><Input value={form.trade_name} onChange={(e) => setForm((f) => ({ ...f, trade_name: e.target.value }))} required /></div>
+                  <div className="space-y-2"><Label>Legal Name</Label><Input value={form.legal_name} onChange={(e) => setForm((f) => ({ ...f, legal_name: e.target.value }))} /></div>
+                  <div className="space-y-2"><Label>Contact Person</Label><Input value={form.contact_person} onChange={(e) => setForm((f) => ({ ...f, contact_person: e.target.value }))} /></div>
+                  <div className="md:col-span-2 space-y-2"><Label>Address</Label><Input value={form.billing_address_line1} onChange={(e) => setForm((f) => ({ ...f, billing_address_line1: e.target.value }))} /></div>
+                  <div className="space-y-2"><Label>City</Label><Input value={form.billing_city} onChange={(e) => setForm((f) => ({ ...f, billing_city: e.target.value }))} /></div>
+                  <div className="space-y-2">
+                    <Label>State</Label>
+                    <Select value={form.billing_state_code} onValueChange={(v) => setForm((f) => ({ ...f, billing_state_code: v }))}>
+                      <SelectTrigger><SelectValue placeholder="Select state" /></SelectTrigger>
+                      <SelectContent>{INDIAN_STATES.map((s) => <SelectItem key={s.code} value={s.code}>{s.code} - {s.name}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2"><Label>Mobile</Label><Input value={form.mobile} onChange={(e) => setForm((f) => ({ ...f, mobile: e.target.value }))} /></div>
+                  <div className="space-y-2"><Label>Email</Label><Input type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} /></div>
+                </div>
+                <Button type="submit" className="w-full" disabled={loading}>{loading ? "Saving..." : editingCustomer ? "Update Customer" : "Save Customer"}</Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <div className="relative">
@@ -255,11 +283,7 @@ export default function Customers() {
             </TableHeader>
             <TableBody>
               {filtered.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground">
-                    No customers found
-                  </TableCell>
-                </TableRow>
+                <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">No customers found</TableCell></TableRow>
               ) : (
                 filtered.map((c) => (
                   <TableRow key={c.id}>
@@ -269,9 +293,7 @@ export default function Customers() {
                     <TableCell className="capitalize">{c.customer_type}</TableCell>
                     <TableCell>{c.mobile || "-"}</TableCell>
                     <TableCell className="text-right">
-                      <Button size="sm" variant="outline" onClick={() => openEdit(c)}>
-                        <Pencil className="mr-1 h-3.5 w-3.5" /> Edit
-                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => openEdit(c)}><Pencil className="mr-1 h-3.5 w-3.5" /> Edit</Button>
                     </TableCell>
                   </TableRow>
                 ))
