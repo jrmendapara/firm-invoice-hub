@@ -96,10 +96,7 @@ export default function Customers() {
     }
   };
 
-  const fillFromPortalText = () => {
-    const raw = window.prompt("Paste GST portal taxpayer details text after solving captcha:");
-    if (!raw) return;
-
+  const applyPortalData = (raw: string) => {
     const pick = (label: string) => {
       const re = new RegExp(`${label}\\s*[:\\-]?\\s*([^\\n\\r]+)`, "i");
       return raw.match(re)?.[1]?.trim() || "";
@@ -119,19 +116,64 @@ export default function Customers() {
       mobile: mobile || f.mobile,
       email: email || f.email,
     }));
-
-    toast({ title: "GST portal details applied" });
   };
 
-  const openGSTPortalSearch = () => {
+  const fetchFromGSTPortalCaptcha = async () => {
     const gstin = form.gstin?.trim();
     if (!gstin || !validateGSTIN(gstin)) {
       toast({ title: "Enter valid GSTIN first", variant: "destructive" });
       return;
     }
 
-    window.open("https://services.gst.gov.in/services/searchtp", "_blank", "noopener,noreferrer");
-    toast({ title: "GST portal opened", description: "Solve captcha, copy details text, then click Paste Portal Text." });
+    const baseUrl = (import.meta.env.VITE_GST_AUTOMATION_URL || "http://localhost:8787").replace(/\/$/, "");
+
+    try {
+      const startRes = await fetch(`${baseUrl}/api/gst/start`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ gstin }),
+      });
+      const startJson = await startRes.json();
+      if (!startRes.ok) throw new Error(startJson?.error || "Failed to start GST session");
+
+      const { sessionId, captchaImage } = startJson;
+      if (captchaImage) window.open(captchaImage, "_blank", "noopener,noreferrer");
+
+      const captcha = window.prompt("Enter captcha shown in opened image:");
+      if (!captcha) {
+        await fetch(`${baseUrl}/api/gst/close`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sessionId }) });
+        return;
+      }
+
+      const submitRes = await fetch(`${baseUrl}/api/gst/submit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId, captcha }),
+      });
+      const submitJson = await submitRes.json();
+      if (!submitRes.ok) throw new Error(submitJson?.error || "Captcha submit failed");
+
+      const data = submitJson?.data || {};
+      const text = [
+        `Legal Name of Business: ${data.legal_name || ""}`,
+        `Trade Name: ${data.trade_name || ""}`,
+        `Principal Place of Business: ${data.address || ""}`,
+        `Mobile: ${data.mobile || ""}`,
+        `Email: ${data.email || ""}`,
+      ].join("\n");
+
+      applyPortalData(text);
+      toast({ title: "GST portal details fetched" });
+    } catch (err: any) {
+      toast({ title: "GST fetch failed", description: err?.message || "Service unavailable", variant: "destructive" });
+    }
+  };
+
+  const fillFromPortalText = () => {
+    const raw = window.prompt("Paste GST portal taxpayer details text:");
+    if (!raw) return;
+    applyPortalData(raw);
+    toast({ title: "Portal text applied" });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -302,7 +344,7 @@ export default function Customers() {
                       <div className="flex flex-wrap gap-2">
                         <Input value={form.gstin} onChange={(e) => handleGSTINChange(e.target.value)} placeholder="22AAAAA0000A1Z5" maxLength={15} />
                         <Button type="button" variant="outline" onClick={handleFetchGST} disabled={form.gstin.length !== 15}>Extract Info</Button>
-                      <Button type="button" variant="outline" onClick={openGSTPortalSearch} disabled={form.gstin.length !== 15}>Open GST Portal</Button>
+                      <Button type="button" variant="outline" onClick={fetchFromGSTPortalCaptcha} disabled={form.gstin.length !== 15}>Fetch from GST Portal</Button>
                       <Button type="button" variant="outline" onClick={fillFromPortalText}>Paste Portal Text</Button>
                       </div>
                     </div>

@@ -60,6 +60,25 @@ This project is built with:
 - shadcn-ui
 - Tailwind CSS
 
+## GST Portal captcha automation service (optional)
+
+To enable **Fetch from GST Portal** in Customer form:
+
+1. Install Playwright browser once:
+   ```bash
+   npx playwright install chromium
+   ```
+2. Run local automation service:
+   ```bash
+   npm run gst:service
+   ```
+3. Set frontend env (example in `.env`):
+   ```bash
+   VITE_GST_AUTOMATION_URL=http://localhost:8787
+   ```
+
+Flow: click `Fetch from GST Portal` → captcha image opens → user enters captcha → service fetches taxpayer details and auto-fills customer fields.
+
 ## How can I deploy this project?
 
 Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
