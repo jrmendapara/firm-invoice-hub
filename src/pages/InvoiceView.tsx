@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { InvoicePrintView } from "@/components/invoice/InvoicePrintView";
 import { InvoiceMobileView } from "@/components/invoice/InvoiceMobileView";
 import { ArrowLeft, Printer, MessageCircle } from "lucide-react";
+import html2canvas from "html2canvas";
+import { jsPDF } from "jspdf";
 
 export default function InvoiceView() {
   const { id } = useParams<{ id: string }>();
@@ -14,12 +16,16 @@ export default function InvoiceView() {
   const [items, setItems] = useState<any[]>([]);
   const [taxSummary, setTaxSummary] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sharingPdf, setSharingPdf] = useState(false);
 
   useEffect(() => {
     if (!id) return;
     const fetchAll = async () => {
       const { data: inv } = await supabase.from("invoices").select("*").eq("id", id).single();
-      if (!inv) { setLoading(false); return; }
+      if (!inv) {
+        setLoading(false);
+        return;
+      }
       setInvoice(inv);
 
       const [compRes, custRes, itemsRes, taxRes] = await Promise.all([
@@ -50,30 +56,92 @@ export default function InvoiceView() {
     return <p className="text-muted-foreground">Invoice not found.</p>;
   }
 
-  const handleWhatsAppShare = () => {
-    const url = window.location.href;
-    const msg = `Invoice ${invoice.invoice_number} - ${company.name}\n${url}`;
-    const waUrl = `https://wa.me/?text=${encodeURIComponent(msg)}`;
-    window.open(waUrl, "_blank", "noopener,noreferrer");
+  const generateInvoicePdf = async (): Promise<File> => {
+    const node = document.getElementById("invoice-mobile-share") || document.querySelector(".print-invoice");
+    if (!node) throw new Error("Invoice view not found");
+
+    const canvas = await html2canvas(node as HTMLElement, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: "#ffffff",
+      logging: false,
+    });
+
+    const imgData = canvas.toDataURL("image/jpeg", 0.95);
+    const pdf = new jsPDF("p", "mm", "a4");
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const imgWidth = pageWidth;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+    if (imgHeight <= pageHeight) {
+      pdf.addImage(imgData, "JPEG", 0, 0, imgWidth, imgHeight);
+    } else {
+      let heightLeft = imgHeight;
+      let position = 0;
+      pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+    }
+
+    const blob = pdf.output("blob");
+    return new File([blob], `Invoice-${invoice.invoice_number}.pdf`, { type: "application/pdf" });
+  };
+
+  const handleWhatsAppShare = async () => {
+    setSharingPdf(true);
+    try {
+      const pdfFile = await generateInvoicePdf();
+      const nav = navigator as Navigator & { canShare?: (data?: ShareData) => boolean };
+
+      if (nav.share && nav.canShare?.({ files: [pdfFile] })) {
+        await nav.share({
+          files: [pdfFile],
+          title: `Invoice ${invoice.invoice_number}`,
+          text: `Invoice ${invoice.invoice_number} - ${company.name}`,
+        });
+        return;
+      }
+
+      // Fallback: download PDF if file share is not supported by browser/webview
+      const downloadUrl = URL.createObjectURL(pdfFile);
+      const a = document.createElement("a");
+      a.href = downloadUrl;
+      a.download = pdfFile.name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(downloadUrl);
+      alert("PDF downloaded. Please attach this PDF manually in WhatsApp.");
+    } catch (e: any) {
+      alert(e?.message || "Unable to generate/share PDF.");
+    } finally {
+      setSharingPdf(false);
+    }
   };
 
   return (
     <div className="space-y-4 pb-24 sm:pb-0">
       <div className="no-print flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <Button variant="ghost" asChild>
-          <Link to="/invoices"><ArrowLeft className="mr-2 h-4 w-4" />Back to Invoices</Link>
+          <Link to="/invoices">
+            <ArrowLeft className="mr-2 h-4 w-4" />Back to Invoices
+          </Link>
         </Button>
         <Button onClick={() => window.print()}>
           <Printer className="mr-2 h-4 w-4" />Print / Save PDF
         </Button>
       </div>
 
-      <InvoiceMobileView
-        invoice={invoice}
-        company={company}
-        customer={customer}
-        items={items}
-      />
+      <div id="invoice-mobile-share">
+        <InvoiceMobileView invoice={invoice} company={company} customer={customer} items={items} />
+      </div>
 
       <div className="hidden sm:block print:block">
         <InvoicePrintView
@@ -92,8 +160,9 @@ export default function InvoiceView() {
             <span className="font-bold">₹{Number(invoice.total_amount || 0).toFixed(2)}</span>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <Button variant="outline" onClick={handleWhatsAppShare}>
-              <MessageCircle className="mr-1 h-4 w-4" />WhatsApp
+            <Button variant="outline" onClick={handleWhatsAppShare} disabled={sharingPdf}>
+              <MessageCircle className="mr-1 h-4 w-4" />
+              {sharingPdf ? "Preparing PDF..." : "WhatsApp PDF"}
             </Button>
             <Button onClick={() => window.print()}>
               <Printer className="mr-1 h-4 w-4" />Print
