@@ -72,10 +72,11 @@ To enable **Fetch from GST Portal** in Customer form:
    ```bash
    npm run gst:service
    ```
-3. Set frontend env (example in `.env`):
+3. Set frontend env in `.env`:
    ```bash
    VITE_GST_AUTOMATION_URL=http://localhost:8787
    ```
+   If your app runs on HTTPS domain (e.g. lovable preview), this URL must also be HTTPS (or proxied via same HTTPS domain), otherwise browser blocks with `Failed to fetch`.
 
 Flow: click `Fetch from GST Portal` → captcha image opens → user enters captcha → service fetches taxpayer details and auto-fills customer fields.
 

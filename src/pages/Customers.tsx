@@ -125,7 +125,25 @@ export default function Customers() {
       return;
     }
 
-    const baseUrl = (import.meta.env.VITE_GST_AUTOMATION_URL || "http://localhost:8787").replace(/\/$/, "");
+    const configuredBaseUrl = (import.meta.env.VITE_GST_AUTOMATION_URL || "").trim();
+    if (!configuredBaseUrl) {
+      toast({
+        title: "GST automation URL missing",
+        description: "Set VITE_GST_AUTOMATION_URL to your GST Playwright service URL.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const baseUrl = configuredBaseUrl.replace(/\/$/, "");
+    if (window.location.protocol === "https:" && baseUrl.startsWith("http://")) {
+      toast({
+        title: "Blocked by browser security",
+        description: "App is on HTTPS but GST service is HTTP. Use HTTPS URL for VITE_GST_AUTOMATION_URL.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
       const startRes = await fetch(`${baseUrl}/api/gst/start`, {
