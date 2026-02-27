@@ -141,6 +141,33 @@ export default function Customers() {
     }
   };
 
+  const downloadCustomersTemplate = () => {
+    const rows = [
+      {
+        trade_name: "ABC Traders",
+        gstin: "24AAAAA0000A1Z5",
+        customer_type: "registered",
+        legal_name: "ABC Traders Pvt Ltd",
+        contact_person: "John",
+        billing_address_line1: "Street 1",
+        billing_city: "Rajkot",
+        billing_state_code: "24",
+        billing_pincode: "360001",
+        mobile: "9876543210",
+        email: "abc@example.com",
+      },
+    ];
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "CustomersTemplate");
+    XLSX.writeFile(wb, "customers_import_template.xlsx");
+  };
+
+  const handleImportCustomersClick = () => {
+    downloadCustomersTemplate();
+    setTimeout(() => importInputRef.current?.click(), 150);
+  };
+
   const handleImportCustomers = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !selectedCompany) return;
@@ -203,7 +230,7 @@ export default function Customers() {
         <h1 className="text-2xl font-display">Customers</h1>
         <div className="flex gap-2">
           <input ref={importInputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImportCustomers} />
-          <Button variant="outline" onClick={() => importInputRef.current?.click()}>
+          <Button variant="outline" onClick={handleImportCustomersClick}>
             <Upload className="mr-2 h-4 w-4" />Import Excel
           </Button>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

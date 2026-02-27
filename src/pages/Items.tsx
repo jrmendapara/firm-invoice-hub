@@ -100,6 +100,21 @@ export default function Items() {
     }
   };
 
+  const downloadItemsTemplate = () => {
+    const rows = [
+      { name: "Sample Item", hsn_sac: "9983", unit: "Nos", gst_rate: 18, default_price: 1000, item_type: "goods", description: "Optional" },
+    ];
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "ItemsTemplate");
+    XLSX.writeFile(wb, "items_import_template.xlsx");
+  };
+
+  const handleImportItemsClick = () => {
+    downloadItemsTemplate();
+    setTimeout(() => importInputRef.current?.click(), 150);
+  };
+
   const handleImportItems = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !selectedCompany) return;
@@ -150,7 +165,7 @@ export default function Items() {
         <h1 className="text-2xl font-display">Items / Products</h1>
         <div className="flex gap-2">
           <input ref={importInputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImportItems} />
-          <Button variant="outline" onClick={() => importInputRef.current?.click()}>
+          <Button variant="outline" onClick={handleImportItemsClick}>
             <Upload className="mr-2 h-4 w-4" />Import Excel
           </Button>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

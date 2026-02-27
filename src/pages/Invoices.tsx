@@ -48,6 +48,36 @@ export default function Invoices() {
     fetchInvoices();
   };
 
+  const downloadInvoicesTemplate = () => {
+    const rows = [
+      {
+        invoice_number: "INV/25-26/0001",
+        invoice_date: "2026-02-27",
+        customer: "ABC Traders",
+        customer_gstin: "24AAAAA0000A1Z5",
+        place_of_supply_code: "24",
+        status: "final",
+        total_taxable_value: 1000,
+        total_cgst: 90,
+        total_sgst: 90,
+        total_igst: 0,
+        total_tax: 180,
+        total_amount: 1180,
+        discount_amount: 0,
+        round_off: 0,
+      },
+    ];
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "InvoicesTemplate");
+    XLSX.writeFile(wb, "invoices_import_template.xlsx");
+  };
+
+  const handleImportInvoicesClick = () => {
+    downloadInvoicesTemplate();
+    setTimeout(() => importInputRef.current?.click(), 150);
+  };
+
   const handleImportInvoices = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !selectedCompany || !user) return;
@@ -133,7 +163,7 @@ export default function Invoices() {
         <h1 className="text-2xl font-display">Invoices</h1>
         <div className="flex gap-2">
           <input ref={importInputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImportInvoices} />
-          <Button variant="outline" onClick={() => importInputRef.current?.click()}>
+          <Button variant="outline" onClick={handleImportInvoicesClick}>
             <Upload className="mr-2 h-4 w-4" />Import Excel
           </Button>
           <Button asChild>
