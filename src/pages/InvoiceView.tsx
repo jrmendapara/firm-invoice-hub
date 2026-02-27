@@ -51,21 +51,35 @@ export default function InvoiceView() {
   }
 
   const handleShare = async () => {
+    const url = window.location.href;
     const shareData = {
       title: `Invoice ${invoice.invoice_number}`,
       text: `Invoice ${invoice.invoice_number} - ${company.name}`,
-      url: window.location.href,
+      url,
     };
 
     try {
       if (navigator.share) {
-        await navigator.share(shareData);
-      } else {
-        await navigator.clipboard.writeText(window.location.href);
-        alert("Invoice link copied to clipboard");
+        try {
+          await navigator.share(shareData);
+          return;
+        } catch {
+          // Some browsers/webviews reject title+text+url combo; retry minimal payload
+          await navigator.share({ text: url });
+          return;
+        }
       }
+
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+        alert("Invoice link copied to clipboard");
+        return;
+      }
+
+      window.prompt("Copy this invoice link:", url);
     } catch {
-      // User cancelled share; ignore
+      // Final fallback if share/clipboard is blocked
+      window.prompt("Copy this invoice link:", url);
     }
   };
 
