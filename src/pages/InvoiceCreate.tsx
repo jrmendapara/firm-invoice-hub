@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCompany } from "@/contexts/CompanyContext";
@@ -44,6 +44,7 @@ function createEmptyLine(): LineItem {
 
 export default function InvoiceCreate() {
   const navigate = useNavigate();
+  const { id: editInvoiceId } = useParams<{ id: string }>();
   const { user } = useAuth();
   const { selectedCompany } = useCompany();
   const { toast } = useToast();
@@ -82,14 +83,53 @@ export default function InvoiceCreate() {
 
   useEffect(() => {
     if (!selectedCompany) return;
-    Promise.all([
-      supabase.from("customers").select("*").eq("company_id", selectedCompany.id).eq("is_active", true).order("trade_name"),
-      supabase.from("items").select("*").eq("company_id", selectedCompany.id).eq("is_active", true).order("name"),
-    ]).then(([custRes, itemRes]) => {
+
+    const load = async () => {
+      const [custRes, itemRes] = await Promise.all([
+        supabase.from("customers").select("*").eq("company_id", selectedCompany.id).eq("is_active", true).order("trade_name"),
+        supabase.from("items").select("*").eq("company_id", selectedCompany.id).eq("is_active", true).order("name"),
+      ]);
+
       setCustomers(custRes.data || []);
       setItems(itemRes.data || []);
-    });
-  }, [selectedCompany]);
+
+      if (!editInvoiceId) return;
+
+      const { data: existingInvoice } = await supabase.from("invoices").select("*").eq("id", editInvoiceId).single();
+      if (!existingInvoice) return;
+
+      const { data: existingLines } = await supabase.from("invoice_items").select("*").eq("invoice_id", editInvoiceId).order("sort_order");
+
+      setCustomerId(existingInvoice.customer_id);
+      setInvoiceDate(existingInvoice.invoice_date);
+      setPlaceOfSupplyCode(existingInvoice.place_of_supply_code || "");
+      setDiscountAmount(existingInvoice.discount_amount || 0);
+      setRoundOff(existingInvoice.round_off || 0);
+
+      if (existingLines && existingLines.length > 0) {
+        setLines(
+          existingLines.map((l) => ({
+            id: crypto.randomUUID(),
+            item_id: l.item_id,
+            description: l.description || "",
+            hsn_sac: l.hsn_sac || "",
+            quantity: Number(l.quantity || 0),
+            unit: l.unit || "Nos",
+            rate: Number(l.rate || 0),
+            discount_percent: Number(l.discount_percent || 0),
+            gst_rate: Number(l.gst_rate || 0),
+            taxable_value: Number(l.taxable_value || 0),
+            cgst: Number(l.cgst_amount || 0),
+            sgst: Number(l.sgst_amount || 0),
+            igst: Number(l.igst_amount || 0),
+            total: Number(l.total_amount || 0),
+          }))
+        );
+      }
+    };
+
+    load();
+  }, [selectedCompany, editInvoiceId]);
 
   // Auto-set place of supply when customer changes
   useEffect(() => {
@@ -266,39 +306,80 @@ export default function InvoiceCreate() {
     const fy = getCurrentFinancialYear();
     const placeState = INDIAN_STATES.find(s => s.code === placeOfSupplyCode);
 
-    // Generate invoice number
-    const { count } = await supabase
-      .from("invoices")
-      .select("id", { count: "exact", head: true })
-      .eq("company_id", selectedCompany.id)
-      .eq("financial_year", fy);
+    let invoiceNumber = "";
+    let invoiceId = editInvoiceId || "";
 
-    const num = (count || 0) + 1;
-    const invoiceNumber = `${selectedCompany.invoice_prefix || "INV/"}${fy}/${String(num).padStart(4, "0")}`;
+    if (editInvoiceId) {
+      const { data: currentInvoice } = await supabase.from("invoices").select("invoice_number, financial_year, created_by").eq("id", editInvoiceId).single();
+      invoiceNumber = currentInvoice?.invoice_number || "";
 
-    const { data: invoice, error } = await supabase.from("invoices").insert({
-      company_id: selectedCompany.id,
-      customer_id: customerId,
-      invoice_number: invoiceNumber,
-      invoice_date: invoiceDate,
-      place_of_supply_state: placeState?.name || "",
-      place_of_supply_code: placeOfSupplyCode,
-      status,
-      discount_amount: discountAmount,
-      round_off: roundOff,
-      total_taxable_value: totals.taxable,
-      total_cgst: totals.cgst,
-      total_sgst: totals.sgst,
-      total_igst: totals.igst,
-      total_tax: totals.cgst + totals.sgst + totals.igst,
-      total_amount: grandTotal,
-      amount_in_words: numberToWordsINR(grandTotal),
-      created_by: user.id,
-      financial_year: fy,
-    }).select().single();
+      const { error } = await supabase.from("invoices").update({
+        customer_id: customerId,
+        invoice_date: invoiceDate,
+        place_of_supply_state: placeState?.name || "",
+        place_of_supply_code: placeOfSupplyCode,
+        status,
+        discount_amount: discountAmount,
+        round_off: roundOff,
+        total_taxable_value: totals.taxable,
+        total_cgst: totals.cgst,
+        total_sgst: totals.sgst,
+        total_igst: totals.igst,
+        total_tax: totals.cgst + totals.sgst + totals.igst,
+        total_amount: grandTotal,
+        amount_in_words: numberToWordsINR(grandTotal),
+      }).eq("id", editInvoiceId);
 
-    if (error || !invoice) {
-      toast({ title: "Error", description: error?.message || "Failed to create invoice", variant: "destructive" });
+      if (error) {
+        toast({ title: "Error", description: error.message, variant: "destructive" });
+        setSaving(false);
+        return;
+      }
+
+      await supabase.from("invoice_items").delete().eq("invoice_id", editInvoiceId);
+      await supabase.from("invoice_tax_summary").delete().eq("invoice_id", editInvoiceId);
+    } else {
+      const { count } = await supabase
+        .from("invoices")
+        .select("id", { count: "exact", head: true })
+        .eq("company_id", selectedCompany.id)
+        .eq("financial_year", fy);
+
+      const num = (count || 0) + 1;
+      invoiceNumber = `${selectedCompany.invoice_prefix || "INV/"}${fy}/${String(num).padStart(4, "0")}`;
+
+      const { data: invoice, error } = await supabase.from("invoices").insert({
+        company_id: selectedCompany.id,
+        customer_id: customerId,
+        invoice_number: invoiceNumber,
+        invoice_date: invoiceDate,
+        place_of_supply_state: placeState?.name || "",
+        place_of_supply_code: placeOfSupplyCode,
+        status,
+        discount_amount: discountAmount,
+        round_off: roundOff,
+        total_taxable_value: totals.taxable,
+        total_cgst: totals.cgst,
+        total_sgst: totals.sgst,
+        total_igst: totals.igst,
+        total_tax: totals.cgst + totals.sgst + totals.igst,
+        total_amount: grandTotal,
+        amount_in_words: numberToWordsINR(grandTotal),
+        created_by: user.id,
+        financial_year: fy,
+      }).select().single();
+
+      if (error || !invoice) {
+        toast({ title: "Error", description: error?.message || "Failed to create invoice", variant: "destructive" });
+        setSaving(false);
+        return;
+      }
+
+      invoiceId = invoice.id;
+    }
+
+    if (!invoiceId) {
+      toast({ title: "Error", description: "Failed to save invoice", variant: "destructive" });
       setSaving(false);
       return;
     }
@@ -306,7 +387,7 @@ export default function InvoiceCreate() {
     // Insert line items
     const validLines = lines.filter(l => l.description);
     const lineInserts = validLines.map((l, idx) => ({
-      invoice_id: invoice.id,
+      invoice_id: invoiceId,
       item_id: l.item_id || null,
       description: l.description,
       hsn_sac: l.hsn_sac || null,
@@ -339,7 +420,7 @@ export default function InvoiceCreate() {
     });
 
     const taxSummary = Array.from(taxMap.entries()).map(([rate, vals]) => ({
-      invoice_id: invoice.id,
+      invoice_id: invoiceId,
       gst_rate: rate,
       taxable_value: vals.taxable,
       cgst_amount: vals.cgst,
@@ -350,16 +431,16 @@ export default function InvoiceCreate() {
 
     await supabase.from("invoice_tax_summary").insert(taxSummary);
 
-    toast({ title: `Invoice ${status === 'final' ? 'created' : 'saved as draft'}`, description: invoiceNumber });
+    toast({ title: `Invoice ${editInvoiceId ? 'updated' : status === 'final' ? 'created' : 'saved as draft'}`, description: invoiceNumber });
     setSaving(false);
-    navigate("/invoices");
+    navigate(editInvoiceId ? `/invoices/${invoiceId}` : "/invoices");
   };
 
   if (!selectedCompany) return <p className="text-muted-foreground">Please select a company first.</p>;
 
   return (
     <div className="space-y-3 px-1 text-sm sm:px-0">
-      <h1 className="border-b border-zinc-500 bg-zinc-200 px-2 py-1 text-lg font-semibold text-zinc-900">New Invoice Entry</h1>
+      <h1 className="border-b border-zinc-500 bg-zinc-200 px-2 py-1 text-lg font-semibold text-zinc-900">{editInvoiceId ? "Edit Invoice" : "New Invoice Entry"}</h1>
 
       <Card className="rounded-none border-zinc-500 bg-zinc-100 shadow-none">
         <CardHeader className="border-b border-zinc-400 px-3 py-2"><CardTitle className="text-base font-semibold">Invoice Details</CardTitle></CardHeader>
@@ -596,10 +677,10 @@ export default function InvoiceCreate() {
 
       <div className="flex flex-col justify-end gap-2 border-t border-zinc-400 pt-2 sm:flex-row">
         <Button variant="outline" className="h-10 rounded-none border-zinc-500 bg-zinc-200 text-xs shadow-none" onClick={() => handleSave("draft")} disabled={saving}>
-          <Save className="mr-1 h-3 w-3" />Save Draft
+          <Save className="mr-1 h-3 w-3" />{editInvoiceId ? "Update Draft" : "Save Draft"}
         </Button>
         <Button className="h-10 rounded-none bg-zinc-800 px-3 text-xs text-white shadow-none hover:bg-zinc-700" onClick={() => handleSave("final")} disabled={saving}>
-          <Save className="mr-1 h-3 w-3" />Finalize Invoice
+          <Save className="mr-1 h-3 w-3" />{editInvoiceId ? "Update Invoice" : "Finalize Invoice"}
         </Button>
       </div>
     </div>

@@ -4,17 +4,31 @@ import { useCompany } from "@/contexts/CompanyContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { INDIAN_STATES, validateGSTIN, getStateFromGSTIN } from "@/lib/indian-states";
-import { Plus, Search } from "lucide-react";
+import { Pencil, Plus, Search } from "lucide-react";
 import { Database } from "@/integrations/supabase/types";
 
 type Customer = Database["public"]["Tables"]["customers"]["Row"];
 type CustomerType = Database["public"]["Enums"]["customer_type"];
+
+const emptyForm = {
+  gstin: "",
+  trade_name: "",
+  legal_name: "",
+  contact_person: "",
+  billing_address_line1: "",
+  billing_city: "",
+  billing_state_code: "",
+  billing_pincode: "",
+  mobile: "",
+  email: "",
+  customer_type: "registered" as CustomerType,
+};
 
 export default function Customers() {
   const { selectedCompany } = useCompany();
@@ -23,26 +37,43 @@ export default function Customers() {
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
 
-  const [form, setForm] = useState({
-    gstin: "", trade_name: "", legal_name: "", contact_person: "",
-    billing_address_line1: "", billing_city: "", billing_state_code: "", billing_pincode: "",
-    mobile: "", email: "", customer_type: "registered" as CustomerType,
-  });
+  const [form, setForm] = useState(emptyForm);
 
   const fetchCustomers = async () => {
     if (!selectedCompany) return;
-    const { data } = await supabase
-      .from("customers")
-      .select("*")
-      .eq("company_id", selectedCompany.id)
-      .eq("is_active", true)
-      .order("trade_name");
+    const { data } = await supabase.from("customers").select("*").eq("company_id", selectedCompany.id).eq("is_active", true).order("trade_name");
     setCustomers(data || []);
   };
 
-  useEffect(() => { fetchCustomers(); }, [selectedCompany]);
+  useEffect(() => {
+    fetchCustomers();
+  }, [selectedCompany]);
+
+  const openCreate = () => {
+    setEditingCustomer(null);
+    setForm(emptyForm);
+    setDialogOpen(true);
+  };
+
+  const openEdit = (customer: Customer) => {
+    setEditingCustomer(customer);
+    setForm({
+      gstin: customer.gstin || "",
+      trade_name: customer.trade_name || "",
+      legal_name: customer.legal_name || "",
+      contact_person: customer.contact_person || "",
+      billing_address_line1: customer.billing_address_line1 || "",
+      billing_city: customer.billing_city || "",
+      billing_state_code: customer.billing_state_code || "",
+      billing_pincode: customer.billing_pincode || "",
+      mobile: customer.mobile || "",
+      email: customer.email || "",
+      customer_type: customer.customer_type,
+    });
+    setDialogOpen(true);
+  };
 
   const handleFetchGST = () => {
     if (!form.gstin || !validateGSTIN(form.gstin)) {
@@ -50,41 +81,33 @@ export default function Customers() {
       return;
     }
     const stateCode = form.gstin.substring(0, 2);
-    const state = INDIAN_STATES.find(s => s.code === stateCode);
-    setForm(f => ({
-      ...f,
-      billing_state_code: state?.code || f.billing_state_code,
-    }));
+    const state = INDIAN_STATES.find((s) => s.code === stateCode);
+    setForm((f) => ({ ...f, billing_state_code: state?.code || f.billing_state_code }));
     toast({ title: "State extracted from GSTIN" });
   };
 
   const handleGSTINChange = (value: string) => {
     const upper = value.toUpperCase();
-    setForm(f => ({ ...f, gstin: upper }));
+    setForm((f) => ({ ...f, gstin: upper }));
     if (upper.length === 15) {
       const state = getStateFromGSTIN(upper);
-      if (state) {
-        setForm(f => ({ ...f, billing_state_code: state.code }));
-      }
+      if (state) setForm((f) => ({ ...f, billing_state_code: state.code }));
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedCompany) return;
-    
-    if (form.customer_type === "registered" && form.gstin) {
-      if (!validateGSTIN(form.gstin)) {
-        toast({ title: "Invalid GSTIN", description: "Please enter a valid 15-character GSTIN.", variant: "destructive" });
-        return;
-      }
+
+    if (form.customer_type === "registered" && form.gstin && !validateGSTIN(form.gstin)) {
+      toast({ title: "Invalid GSTIN", description: "Please enter a valid 15-character GSTIN.", variant: "destructive" });
+      return;
     }
 
     setLoading(true);
-    const state = INDIAN_STATES.find(s => s.code === form.billing_state_code);
-    
-    const { error } = await supabase.from("customers").insert({
-      company_id: selectedCompany.id,
+    const state = INDIAN_STATES.find((s) => s.code === form.billing_state_code);
+
+    const payload = {
       gstin: form.gstin || null,
       trade_name: form.trade_name,
       legal_name: form.legal_name || null,
@@ -97,23 +120,28 @@ export default function Customers() {
       mobile: form.mobile || null,
       email: form.email || null,
       customer_type: form.customer_type,
-    });
+    };
+
+    const query = editingCustomer
+      ? supabase.from("customers").update(payload).eq("id", editingCustomer.id)
+      : supabase.from("customers").insert({ company_id: selectedCompany.id, ...payload });
+
+    const { error } = await query;
 
     setLoading(false);
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Customer created" });
+      toast({ title: editingCustomer ? "Customer updated" : "Customer created" });
       setDialogOpen(false);
-      setForm({ gstin: "", trade_name: "", legal_name: "", contact_person: "", billing_address_line1: "", billing_city: "", billing_state_code: "", billing_pincode: "", mobile: "", email: "", customer_type: "registered" });
+      setEditingCustomer(null);
+      setForm(emptyForm);
       fetchCustomers();
     }
   };
 
-  const filtered = customers.filter(c =>
-    c.trade_name.toLowerCase().includes(search.toLowerCase()) ||
-    (c.gstin || "").toLowerCase().includes(search.toLowerCase()) ||
-    (c.mobile || "").includes(search)
+  const filtered = customers.filter(
+    (c) => c.trade_name.toLowerCase().includes(search.toLowerCase()) || (c.gstin || "").toLowerCase().includes(search.toLowerCase()) || (c.mobile || "").includes(search)
   );
 
   if (!selectedCompany) return <p className="text-muted-foreground">Please select a company first.</p>;
@@ -124,18 +152,22 @@ export default function Customers() {
         <h1 className="text-2xl font-display">Customers</h1>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button><Plus className="mr-2 h-4 w-4" />Add Customer</Button>
+            <Button onClick={openCreate}>
+              <Plus className="mr-2 h-4 w-4" />Add Customer
+            </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Add Customer</DialogTitle>
+              <DialogTitle>{editingCustomer ? "Edit Customer" : "Add Customer"}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="md:col-span-2 space-y-2">
                   <Label>Customer Type</Label>
-                  <Select value={form.customer_type} onValueChange={(v) => setForm(f => ({ ...f, customer_type: v as CustomerType }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                  <Select value={form.customer_type} onValueChange={(v) => setForm((f) => ({ ...f, customer_type: v as CustomerType }))}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="registered">Registered</SelectItem>
                       <SelectItem value="unregistered">Unregistered</SelectItem>
@@ -144,6 +176,7 @@ export default function Customers() {
                     </SelectContent>
                   </Select>
                 </div>
+
                 {form.customer_type === "registered" && (
                   <div className="md:col-span-2 space-y-2">
                     <Label>GSTIN</Label>
@@ -155,46 +188,47 @@ export default function Customers() {
                     </div>
                   </div>
                 )}
+
                 <div className="md:col-span-2 space-y-2">
                   <Label>Trade Name *</Label>
-                  <Input value={form.trade_name} onChange={(e) => setForm(f => ({ ...f, trade_name: e.target.value }))} required />
+                  <Input value={form.trade_name} onChange={(e) => setForm((f) => ({ ...f, trade_name: e.target.value }))} required />
                 </div>
                 <div className="space-y-2">
                   <Label>Legal Name</Label>
-                  <Input value={form.legal_name} onChange={(e) => setForm(f => ({ ...f, legal_name: e.target.value }))} />
+                  <Input value={form.legal_name} onChange={(e) => setForm((f) => ({ ...f, legal_name: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
                   <Label>Contact Person</Label>
-                  <Input value={form.contact_person} onChange={(e) => setForm(f => ({ ...f, contact_person: e.target.value }))} />
+                  <Input value={form.contact_person} onChange={(e) => setForm((f) => ({ ...f, contact_person: e.target.value }))} />
                 </div>
                 <div className="md:col-span-2 space-y-2">
                   <Label>Address</Label>
-                  <Input value={form.billing_address_line1} onChange={(e) => setForm(f => ({ ...f, billing_address_line1: e.target.value }))} />
+                  <Input value={form.billing_address_line1} onChange={(e) => setForm((f) => ({ ...f, billing_address_line1: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
                   <Label>City</Label>
-                  <Input value={form.billing_city} onChange={(e) => setForm(f => ({ ...f, billing_city: e.target.value }))} />
+                  <Input value={form.billing_city} onChange={(e) => setForm((f) => ({ ...f, billing_city: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
                   <Label>State</Label>
-                  <Select value={form.billing_state_code} onValueChange={(v) => setForm(f => ({ ...f, billing_state_code: v }))}>
-                    <SelectTrigger><SelectValue placeholder="Select state" /></SelectTrigger>
-                    <SelectContent>
-                      {INDIAN_STATES.map(s => <SelectItem key={s.code} value={s.code}>{s.code} - {s.name}</SelectItem>)}
-                    </SelectContent>
+                  <Select value={form.billing_state_code} onValueChange={(v) => setForm((f) => ({ ...f, billing_state_code: v }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select state" />
+                    </SelectTrigger>
+                    <SelectContent>{INDIAN_STATES.map((s) => <SelectItem key={s.code} value={s.code}>{s.code} - {s.name}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
                   <Label>Mobile</Label>
-                  <Input value={form.mobile} onChange={(e) => setForm(f => ({ ...f, mobile: e.target.value }))} />
+                  <Input value={form.mobile} onChange={(e) => setForm((f) => ({ ...f, mobile: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
                   <Label>Email</Label>
-                  <Input type="email" value={form.email} onChange={(e) => setForm(f => ({ ...f, email: e.target.value }))} />
+                  <Input type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
                 </div>
               </div>
               <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Saving..." : "Save Customer"}
+                {loading ? "Saving..." : editingCustomer ? "Update Customer" : "Save Customer"}
               </Button>
             </form>
           </DialogContent>
@@ -208,7 +242,7 @@ export default function Customers() {
 
       <Card>
         <CardContent className="p-0 overflow-x-auto">
-          <Table className="min-w-[760px]">
+          <Table className="min-w-[860px]">
             <TableHeader>
               <TableRow>
                 <TableHead>Trade Name</TableHead>
@@ -216,19 +250,29 @@ export default function Customers() {
                 <TableHead>State</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Mobile</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">No customers found</TableCell></TableRow>
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-muted-foreground">
+                    No customers found
+                  </TableCell>
+                </TableRow>
               ) : (
-                filtered.map(c => (
+                filtered.map((c) => (
                   <TableRow key={c.id}>
                     <TableCell className="font-medium">{c.trade_name}</TableCell>
                     <TableCell className="font-mono text-sm">{c.gstin || "-"}</TableCell>
                     <TableCell>{c.billing_state_name || "-"}</TableCell>
                     <TableCell className="capitalize">{c.customer_type}</TableCell>
                     <TableCell>{c.mobile || "-"}</TableCell>
+                    <TableCell className="text-right">
+                      <Button size="sm" variant="outline" onClick={() => openEdit(c)}>
+                        <Pencil className="mr-1 h-3.5 w-3.5" /> Edit
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))
               )}
