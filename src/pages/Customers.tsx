@@ -96,6 +96,44 @@ export default function Customers() {
     }
   };
 
+  const fillFromPortalText = () => {
+    const raw = window.prompt("Paste GST portal taxpayer details text after solving captcha:");
+    if (!raw) return;
+
+    const pick = (label: string) => {
+      const re = new RegExp(`${label}\\s*[:\\-]?\\s*([^\\n\\r]+)`, "i");
+      return raw.match(re)?.[1]?.trim() || "";
+    };
+
+    const legal = pick("Legal Name of Business") || pick("Legal Name");
+    const trade = pick("Trade Name");
+    const address = pick("Principal Place of Business") || pick("Address");
+    const mobile = pick("Mobile") || pick("Mobile No");
+    const email = pick("Email") || pick("Email Address");
+
+    setForm((f) => ({
+      ...f,
+      legal_name: legal || f.legal_name,
+      trade_name: trade || legal || f.trade_name,
+      billing_address_line1: address || f.billing_address_line1,
+      mobile: mobile || f.mobile,
+      email: email || f.email,
+    }));
+
+    toast({ title: "GST portal details applied" });
+  };
+
+  const openGSTPortalSearch = () => {
+    const gstin = form.gstin?.trim();
+    if (!gstin || !validateGSTIN(gstin)) {
+      toast({ title: "Enter valid GSTIN first", variant: "destructive" });
+      return;
+    }
+
+    window.open("https://services.gst.gov.in/services/searchtp", "_blank", "noopener,noreferrer");
+    toast({ title: "GST portal opened", description: "Solve captcha, copy details text, then click Paste Portal Text." });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedCompany) return;
@@ -261,9 +299,11 @@ export default function Customers() {
                   {form.customer_type === "registered" && (
                     <div className="md:col-span-2 space-y-2">
                       <Label>GSTIN</Label>
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2">
                         <Input value={form.gstin} onChange={(e) => handleGSTINChange(e.target.value)} placeholder="22AAAAA0000A1Z5" maxLength={15} />
                         <Button type="button" variant="outline" onClick={handleFetchGST} disabled={form.gstin.length !== 15}>Extract Info</Button>
+                      <Button type="button" variant="outline" onClick={openGSTPortalSearch} disabled={form.gstin.length !== 15}>Open GST Portal</Button>
+                      <Button type="button" variant="outline" onClick={fillFromPortalText}>Paste Portal Text</Button>
                       </div>
                     </div>
                   )}
