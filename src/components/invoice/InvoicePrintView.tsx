@@ -10,7 +10,7 @@ interface InvoicePrintViewProps {
 
 export function InvoicePrintView({ invoice, company, customer, items }: InvoicePrintViewProps) {
   const isInterState = company.state_code !== invoice.place_of_supply_code;
-  const minItemRows = 10;
+  const minItemRows = 6;
   const fillerRowCount = Math.max(0, minItemRows - (items?.length || 0));
   const logoUrl = company.logo_url
     ? `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/company-logos/${company.logo_url}`
@@ -30,10 +30,21 @@ export function InvoicePrintView({ invoice, company, customer, items }: InvoiceP
             position: absolute;
             left: 0;
             top: 0;
-            width: 100%;
+            width: 190mm !important;
+            min-height: 277mm;
+            max-height: 277mm;
+            overflow: hidden;
             padding: 0 !important;
             margin: 0 !important;
             max-width: 100% !important;
+            font-size: 10px;
+            line-height: 1.25;
+          }
+
+          .print-invoice,
+          .print-invoice * {
+            break-inside: avoid-page;
+            page-break-inside: avoid;
           }
 
           .no-print { display: none !important; }
