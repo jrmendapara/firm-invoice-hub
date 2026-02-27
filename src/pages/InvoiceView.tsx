@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { InvoicePrintView } from "@/components/invoice/InvoicePrintView";
+import { InvoiceMobileView } from "@/components/invoice/InvoiceMobileView";
 import { ArrowLeft, Printer } from "lucide-react";
 
 export default function InvoiceView() {
@@ -60,13 +61,22 @@ export default function InvoiceView() {
         </Button>
       </div>
 
-      <InvoicePrintView
+      <InvoiceMobileView
         invoice={invoice}
         company={company}
         customer={customer}
         items={items}
-        taxSummary={taxSummary}
       />
+
+      <div className="hidden sm:block print:block">
+        <InvoicePrintView
+          invoice={invoice}
+          company={company}
+          customer={customer}
+          items={items}
+          taxSummary={taxSummary}
+        />
+      </div>
     </div>
   );
 }
