@@ -55,7 +55,7 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-display text-foreground">{selectedCompany.name}</h1>
           <p className="text-sm text-muted-foreground">GSTIN: {selectedCompany.gstin || "N/A"}</p>
@@ -119,7 +119,7 @@ export default function Dashboard() {
                 <Link
                   key={inv.id}
                   to={`/invoices/${inv.id}`}
-                  className="flex items-center justify-between rounded-lg border border-border p-3 hover:bg-accent transition-colors"
+                  className="flex flex-col gap-2 rounded-lg border border-border p-3 transition-colors hover:bg-accent sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div>
                     <p className="font-medium">{inv.invoice_number}</p>

@@ -120,7 +120,7 @@ export default function Customers() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-display">Customers</h1>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
@@ -131,8 +131,8 @@ export default function Customers() {
               <DialogTitle>Add Customer</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2 space-y-2">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="md:col-span-2 space-y-2">
                   <Label>Customer Type</Label>
                   <Select value={form.customer_type} onValueChange={(v) => setForm(f => ({ ...f, customer_type: v as CustomerType }))}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
@@ -145,7 +145,7 @@ export default function Customers() {
                   </Select>
                 </div>
                 {form.customer_type === "registered" && (
-                  <div className="col-span-2 space-y-2">
+                  <div className="md:col-span-2 space-y-2">
                     <Label>GSTIN</Label>
                     <div className="flex gap-2">
                       <Input value={form.gstin} onChange={(e) => handleGSTINChange(e.target.value)} placeholder="22AAAAA0000A1Z5" maxLength={15} />
@@ -155,7 +155,7 @@ export default function Customers() {
                     </div>
                   </div>
                 )}
-                <div className="col-span-2 space-y-2">
+                <div className="md:col-span-2 space-y-2">
                   <Label>Trade Name *</Label>
                   <Input value={form.trade_name} onChange={(e) => setForm(f => ({ ...f, trade_name: e.target.value }))} required />
                 </div>
@@ -167,7 +167,7 @@ export default function Customers() {
                   <Label>Contact Person</Label>
                   <Input value={form.contact_person} onChange={(e) => setForm(f => ({ ...f, contact_person: e.target.value }))} />
                 </div>
-                <div className="col-span-2 space-y-2">
+                <div className="md:col-span-2 space-y-2">
                   <Label>Address</Label>
                   <Input value={form.billing_address_line1} onChange={(e) => setForm(f => ({ ...f, billing_address_line1: e.target.value }))} />
                 </div>
@@ -207,8 +207,8 @@ export default function Customers() {
       </div>
 
       <Card>
-        <CardContent className="p-0">
-          <Table>
+        <CardContent className="p-0 overflow-x-auto">
+          <Table className="min-w-[760px]">
             <TableHeader>
               <TableRow>
                 <TableHead>Trade Name</TableHead>

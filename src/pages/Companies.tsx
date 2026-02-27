@@ -257,7 +257,7 @@ export default function Companies() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-display">Companies</h1>
         <Dialog
           open={dialogOpen}
@@ -276,8 +276,8 @@ export default function Companies() {
               <DialogTitle>{isEditMode ? "Edit Company" : "Add Company"}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2 space-y-2">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="md:col-span-2 space-y-2">
                   <Label>Company Name *</Label>
                   <Input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} required />
                 </div>
@@ -285,13 +285,13 @@ export default function Companies() {
                   <Label>Legal Name</Label>
                   <Input value={form.legal_name} onChange={(e) => setForm((f) => ({ ...f, legal_name: e.target.value }))} />
                 </div>
-                <div className="col-span-2 space-y-2">
+                <div className="md:col-span-2 space-y-2">
                   <Label>Company Logo (auto-resize)</Label>
                   <Input type="file" accept="image/*" onChange={handleLogoChange} />
                   <p className="text-xs text-muted-foreground">Auto converted to optimized WebP and resized for invoice header.</p>
                   {logoPreview && <img src={logoPreview} alt="Logo preview" className="h-16 w-auto rounded border p-1" />}
                 </div>
-                <div className="col-span-2 space-y-2">
+                <div className="md:col-span-2 space-y-2">
                   <Label>GSTIN</Label>
                   <div className="flex gap-2">
                     <Input
@@ -324,7 +324,7 @@ export default function Companies() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="col-span-2 space-y-2">
+                <div className="md:col-span-2 space-y-2">
                   <Label>Address</Label>
                   <Input value={form.address_line1} onChange={(e) => setForm((f) => ({ ...f, address_line1: e.target.value }))} />
                 </div>
@@ -356,7 +356,7 @@ export default function Companies() {
                   <Label>Signatory Name</Label>
                   <Input value={form.signatory_name} onChange={(e) => setForm((f) => ({ ...f, signatory_name: e.target.value }))} />
                 </div>
-                <div className="col-span-2 mt-2 border-t pt-2">
+                <div className="md:col-span-2 mt-2 border-t pt-2">
                   <Label className="text-base font-medium">Bank Details</Label>
                 </div>
                 <div className="space-y-2">
@@ -385,8 +385,8 @@ export default function Companies() {
       </div>
 
       <Card>
-        <CardContent className="p-0">
-          <Table>
+        <CardContent className="p-0 overflow-x-auto">
+          <Table className="min-w-[760px]">
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>

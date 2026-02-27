@@ -51,7 +51,7 @@ export default function InvoiceView() {
 
   return (
     <div className="space-y-4">
-      <div className="no-print flex items-center justify-between">
+      <div className="no-print flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <Button variant="ghost" asChild>
           <Link to="/invoices"><ArrowLeft className="mr-2 h-4 w-4" />Back to Invoices</Link>
         </Button>

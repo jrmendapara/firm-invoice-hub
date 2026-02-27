@@ -119,7 +119,7 @@ export default function SalesRegister() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-display">Sales Register</h1>
         <Button onClick={exportToExcel} disabled={invoices.length === 0}>
           <Download className="mr-2 h-4 w-4" />Export Excel
@@ -128,7 +128,7 @@ export default function SalesRegister() {
 
       <Card>
         <CardContent className="pt-4">
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
             <div className="space-y-1">
               <Label className="text-xs">From Date</Label>
               <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
@@ -175,8 +175,8 @@ export default function SalesRegister() {
       </Card>
 
       <Card>
-        <CardContent className="p-0">
-          <Table>
+        <CardContent className="p-0 overflow-x-auto">
+          <Table className="min-w-[1200px]">
             <TableHeader>
               <TableRow>
                 <TableHead>Date</TableHead>

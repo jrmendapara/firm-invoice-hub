@@ -72,7 +72,7 @@ export default function Items() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-display">Items / Products</h1>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
@@ -85,7 +85,7 @@ export default function Items() {
                 <Label>Item Name *</Label>
                 <Input value={form.name} onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))} required />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label>HSN/SAC</Label>
                   <Input value={form.hsn_sac} onChange={(e) => setForm(f => ({ ...f, hsn_sac: e.target.value }))} />
@@ -131,8 +131,8 @@ export default function Items() {
       </div>
 
       <Card>
-        <CardContent className="p-0">
-          <Table>
+        <CardContent className="p-0 overflow-x-auto">
+          <Table className="min-w-[760px]">
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>

@@ -37,7 +37,7 @@ export default function Invoices() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-display">Invoices</h1>
         <Button asChild>
           <Link to="/invoices/new"><Plus className="mr-2 h-4 w-4" />New Invoice</Link>
@@ -50,8 +50,8 @@ export default function Invoices() {
       </div>
 
       <Card>
-        <CardContent className="p-0">
-          <Table>
+        <CardContent className="p-0 overflow-x-auto">
+          <Table className="min-w-[900px]">
             <TableHeader>
               <TableRow>
                 <TableHead>Invoice #</TableHead>
