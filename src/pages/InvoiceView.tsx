@@ -99,13 +99,11 @@ export default function InvoiceView() {
     try {
       const pdfFile = await generateInvoicePdf();
       const nav = navigator as Navigator & { canShare?: (data?: ShareData) => boolean };
-      const shareTitle = `Invoice ${invoice.invoice_number}`;
-      const shareText = `Invoice ${invoice.invoice_number} - ${company.name}`;
-
       // Try native file share first (best UX on mobile)
       if (nav.share) {
         try {
-          await nav.share({ files: [pdfFile], title: shareTitle, text: shareText });
+          // Send only file (no text) so WhatsApp opens contact picker and sends PDF attachment.
+          await nav.share({ files: [pdfFile] });
           return;
         } catch {
           // Continue to fallback flow
