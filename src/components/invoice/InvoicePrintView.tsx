@@ -10,7 +10,7 @@ interface InvoicePrintViewProps {
 
 export function InvoicePrintView({ invoice, company, customer, items }: InvoicePrintViewProps) {
   const isInterState = company.state_code !== invoice.place_of_supply_code;
-  const minItemRows = 6;
+  const minItemRows = 9;
   const fillerRowCount = Math.max(0, minItemRows - (items?.length || 0));
   const logoUrl = company.logo_url
     ? `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/company-logos/${company.logo_url}`
@@ -73,7 +73,7 @@ export function InvoicePrintView({ invoice, company, customer, items }: InvoiceP
         .print-invoice th { background: #f0f0f0; font-weight: 600; text-align: center; }
       `}</style>
 
-      <div className="mb-1 border-2 border-black">
+      <div className="mb-0 flex min-h-[277mm] flex-col border-2 border-black">
         {/* Header style like sample: logo at left + centered firm details at right */}
         <div className="grid grid-cols-[200px_1fr] border-b border-black">
           <div className="flex items-center justify-center border-r border-black p-2">
@@ -165,8 +165,8 @@ export function InvoicePrintView({ invoice, company, customer, items }: InvoiceP
           </div>
         </div>
 
-        <div className="border-t border-black">
-          <table>
+        <div className="flex-1 border-t border-black">
+          <table className="h-full">
             <thead>
               <tr>
                 <th className="w-8">S.No</th>
