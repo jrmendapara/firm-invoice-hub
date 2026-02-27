@@ -10,7 +10,15 @@ const PORT = process.env.GST_AUTOMATION_PORT || 8787;
 const sessions = new Map();
 
 async function launchSession(gstin) {
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({
+    headless: true,
+    args: [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
+      "--no-zygote",
+    ],
+  });
   const context = await browser.newContext({ viewport: { width: 1366, height: 900 } });
   const page = await context.newPage();
 
