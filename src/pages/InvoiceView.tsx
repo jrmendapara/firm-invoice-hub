@@ -112,21 +112,9 @@ export default function InvoiceView() {
         }
       }
 
-      // Fallback 1: download file
-      const downloadUrl = URL.createObjectURL(pdfFile);
-      const a = document.createElement("a");
-      a.href = downloadUrl;
-      a.download = pdfFile.name;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(downloadUrl);
-
-      // Fallback 2: open WhatsApp with pre-filled message
-      const waText = encodeURIComponent(`${shareText}\n\nPDF downloaded as ${pdfFile.name}. Please attach it in WhatsApp.`);
-      window.open(`https://wa.me/?text=${waText}`, "_blank", "noopener,noreferrer");
-
-      alert("PDF downloaded. WhatsApp opened with message. Please attach the downloaded PDF file.");
+      // Direct file send is only possible via native share sheet.
+      // If unavailable in this browser/webview, inform user clearly.
+      throw new Error("Direct PDF send is not supported in this browser. Open this page in mobile Chrome/Safari and use WhatsApp PDF button.");
     } catch (e: any) {
       alert(e?.message || "Unable to generate/share PDF.");
     } finally {
