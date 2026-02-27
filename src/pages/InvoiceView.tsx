@@ -99,28 +99,22 @@ export default function InvoiceView() {
     try {
       const pdfFile = await generateInvoicePdf();
       const nav = navigator as Navigator & { canShare?: (data?: ShareData) => boolean };
-
-      // Best case: native file share works (opens WhatsApp/contact picker)
-      if (nav.share && nav.canShare?.({ files: [pdfFile] })) {
-        await nav.share({ files: [pdfFile] });
-        return;
+      // Try native file share first (best UX on mobile)
+      if (nav.share) {
+        try {
+          // Send only file (no text) so WhatsApp opens contact picker and sends PDF attachment.
+          await nav.share({ files: [pdfFile] });
+          return;
+        } catch {
+          // Continue to fallback flow
+        }
       }
 
-      // Embedded/in-app browser fallback: download PDF then open WhatsApp compose text
-      const downloadUrl = URL.createObjectURL(pdfFile);
-      const a = document.createElement("a");
-      a.href = downloadUrl;
-      a.download = pdfFile.name;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(downloadUrl);
-
-      const msg = `Invoice ${invoice.invoice_number} - ${company.name}\nPDF downloaded as ${pdfFile.name}. Please attach this file in WhatsApp.`;
-      window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank", "noopener,noreferrer");
-    } catch {
-      const msg = `Invoice ${invoice.invoice_number} - ${company.name}\n${window.location.href}`;
-      window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank", "noopener,noreferrer");
+      // Direct file send is only possible via native share sheet.
+      // If unavailable in this browser/webview, inform user clearly.
+      throw new Error("Direct PDF send is not supported in this browser. Open this page in mobile Chrome/Safari and use WhatsApp PDF button.");
+    } catch (e: any) {
+      alert(e?.message || "Unable to generate/share PDF.");
     } finally {
       setSharingPdf(false);
     }
