@@ -17,7 +17,7 @@ export function InvoicePrintView({ invoice, company, customer, items }: InvoiceP
     : null;
 
   return (
-    <div className="print-invoice mx-auto max-w-[210mm] bg-white p-8 text-[11px] leading-relaxed text-black">
+    <div className="print-invoice mx-auto w-full max-w-[210mm] bg-white p-2 text-[10px] leading-relaxed text-black sm:p-8 sm:text-[11px]">
       <style>{`
         @media print {
           @page { size: A4; margin: 10mm; }
@@ -46,8 +46,8 @@ export function InvoicePrintView({ invoice, company, customer, items }: InvoiceP
       `}</style>
 
       <div className="mb-0 flex min-h-[277mm] flex-col border-2 border-black">
-        <div className="grid grid-cols-[200px_1fr] border-b border-black">
-          <div className="flex items-center justify-center border-r border-black p-2">
+        <div className="grid grid-cols-1 border-b border-black sm:grid-cols-[200px_1fr]">
+          <div className="flex items-center justify-center border-b border-black p-2 sm:border-b-0 sm:border-r">
             {logoUrl ? (
               <img src={logoUrl} alt="Logo" className="h-[100px] w-[170px] rounded-[24px] border border-[#0d7ca6] object-contain p-2" />
             ) : (
@@ -55,8 +55,8 @@ export function InvoicePrintView({ invoice, company, customer, items }: InvoiceP
             )}
           </div>
           <div>
-            <div className="border-b border-black py-2 text-center text-[22px] font-bold tracking-wide uppercase">{company.name}</div>
-            <div className="py-2 text-center text-[12px] font-medium uppercase">
+            <div className="border-b border-black px-1 py-2 text-center text-[16px] font-bold tracking-wide uppercase sm:text-[22px]">{company.name}</div>
+            <div className="px-2 py-2 text-center text-[11px] font-medium uppercase sm:text-[12px]">
               {[company.address_line1, company.address_line2, company.city, company.state_name, company.pincode].filter(Boolean).join(", ")}
             </div>
             <div className="border-t border-black py-1 text-center text-[10px]">
@@ -69,8 +69,8 @@ export function InvoicePrintView({ invoice, company, customer, items }: InvoiceP
 
         <div className="border-b border-black p-3 text-center text-base font-bold">Tax Invoice</div>
 
-        <div className="grid grid-cols-2">
-          <div className="border-r border-black p-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2">
+          <div className="border-b border-black p-3 sm:border-b-0 sm:border-r">
             <div className="grid grid-cols-2 gap-y-1">
               <div className="font-semibold">GSTIN:</div><div>{company.gstin || "N/A"}</div>
               {company.pan && <><div className="font-semibold">PAN:</div><div>{company.pan}</div></>}
@@ -87,8 +87,8 @@ export function InvoicePrintView({ invoice, company, customer, items }: InvoiceP
           </div>
         </div>
 
-        <div className="grid grid-cols-2 border-t border-black">
-          <div className="border-r border-black p-3">
+        <div className="grid grid-cols-1 border-t border-black sm:grid-cols-2">
+          <div className="border-b border-black p-3 sm:border-b-0 sm:border-r">
             <div className="mb-1 font-semibold">Bill To:</div>
             <div className="font-bold">{customer.trade_name}</div>
             {customer.billing_address_line1 && <div>{customer.billing_address_line1}</div>}
@@ -105,8 +105,8 @@ export function InvoicePrintView({ invoice, company, customer, items }: InvoiceP
         </div>
 
         {/* Middle section as reference */}
-        <div className="flex-1 border-t border-black min-h-[112mm]">
-          <table className="h-full">
+        <div className="flex-1 min-h-[112mm] border-t border-black overflow-x-auto">
+          <table className="h-full min-w-[680px] sm:min-w-0">
             <thead>
               <tr>
                 <th className="w-8">S.No</th>
@@ -152,8 +152,8 @@ export function InvoicePrintView({ invoice, company, customer, items }: InvoiceP
           </table>
         </div>
 
-        <div className="grid grid-cols-2 border-t border-black">
-          <div className="border-r border-black p-3">
+        <div className="grid grid-cols-1 border-t border-black sm:grid-cols-2">
+          <div className="border-b border-black p-3 sm:border-b-0 sm:border-r">
             <div className="font-semibold">Amount in Words:</div>
             <div className="italic">{invoice.amount_in_words || numberToWordsINR(invoice.total_amount)}</div>
           </div>
@@ -166,8 +166,8 @@ export function InvoicePrintView({ invoice, company, customer, items }: InvoiceP
           </div>
         </div>
 
-        <div className="grid grid-cols-2 border-t border-black">
-          <div className="border-r border-black p-3">
+        <div className="grid grid-cols-1 border-t border-black sm:grid-cols-2">
+          <div className="border-b border-black p-3 sm:border-b-0 sm:border-r">
             {company.bank_name && <><div className="mb-1 font-semibold">Bank Details:</div><div>Bank: {company.bank_name}</div>{company.bank_account_no && <div>A/c No: {company.bank_account_no}</div>}{company.bank_ifsc && <div>IFSC: {company.bank_ifsc}</div>}</>}
             <div className="mt-3 text-[10px]"><div className="font-semibold">Declaration:</div><div>We declare that this invoice shows the actual price of the goods/services described and that all particulars are true and correct.</div></div>
           </div>
