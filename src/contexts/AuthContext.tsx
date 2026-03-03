@@ -25,6 +25,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [profile, setProfile] = useState<{ full_name: string | null; email: string | null } | null>(null);
 
+  const withTimeout = async <T,>(promise: Promise<T>, timeoutMs = 5000): Promise<T> => {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error("Request timed out")), timeoutMs);
+      promise
+        .then((value) => {
+          clearTimeout(timer);
+          resolve(value);
+        })
+        .catch((error) => {
+          clearTimeout(timer);
+          reject(error);
+        });
+    });
+  };
+
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
@@ -36,8 +51,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setTimeout(async () => {
             try {
               const [rolesRes, profileRes] = await Promise.all([
-                supabase.from("user_roles").select("role").eq("user_id", session.user.id),
-                supabase.from("profiles").select("full_name, email").eq("user_id", session.user.id).maybeSingle(),
+                withTimeout(
+                  supabase.from("user_roles").select("role").eq("user_id", session.user.id),
+                  4000
+                ),
+                withTimeout(
+                  supabase.from("profiles").select("full_name, email").eq("user_id", session.user.id).maybeSingle(),
+                  4000
+                ),
               ]);
 
               setRoles((rolesRes.data || []).map((r) => r.role));
@@ -74,8 +95,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       subscription.unsubscribe();
       clearTimeout(fallbackTimer);
     };
-
-    return () => subscription.unsubscribe();
   }, []);
 
   const signOut = async () => {
