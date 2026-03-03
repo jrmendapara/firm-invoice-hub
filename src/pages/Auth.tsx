@@ -15,7 +15,7 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  const withTimeout = async <T,>(promise: Promise<T>, timeoutMs = 30000): Promise<T> => {
+  const withTimeout = async <T,>(promise: Promise<T>, timeoutMs = 12000): Promise<T> => {
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error("Login request timed out. Please check your internet connection and try again.")), timeoutMs);
       promise
@@ -30,7 +30,7 @@ export default function Auth() {
     });
   };
 
-  const withRetry = async <T,>(fn: () => Promise<T>, retries = 2): Promise<T> => {
+  const withRetry = async <T,>(fn: () => Promise<T>, retries = 0): Promise<T> => {
     for (let i = 0; i <= retries; i++) {
       try {
         return await fn();
@@ -44,26 +44,38 @@ export default function Auth() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      toast({
+        title: "No internet connection",
+        description: "Please connect to the internet and try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
       if (isLogin) {
-        const { error } = await withRetry(() =>
-          withTimeout(supabase.auth.signInWithPassword({ email, password }))
+        const { error } = await withTimeout(
+          supabase.auth.signInWithPassword({ email, password })
         );
         if (error) throw error;
       } else {
-        const { error } = await withRetry(() =>
-          withTimeout(
-            supabase.auth.signUp({
-              email,
-              password,
-              options: {
-                data: { full_name: fullName },
-                emailRedirectTo: window.location.origin,
-              },
-            })
-          )
+        const { error } = await withRetry(
+          () =>
+            withTimeout(
+              supabase.auth.signUp({
+                email,
+                password,
+                options: {
+                  data: { full_name: fullName },
+                  emailRedirectTo: window.location.origin,
+                },
+              })
+            ),
+          1
         );
         if (error) throw error;
         toast({
