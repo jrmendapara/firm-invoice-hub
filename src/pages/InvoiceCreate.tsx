@@ -505,7 +505,7 @@ export default function InvoiceCreate() {
 
               <div className="flex flex-wrap items-center gap-2">
                 <Select value={newCustomerStateCode} onValueChange={setNewCustomerStateCode}>
-                  <SelectTrigger className="h-10 min-w-[280px] rounded-none border-zinc-400 bg-white text-sm"><SelectValue placeholder="State" /></SelectTrigger>
+                  <SelectTrigger className="h-10 w-full min-w-0 rounded-none border-zinc-400 bg-white text-sm"><SelectValue placeholder="State" /></SelectTrigger>
                   <SelectContent>
                     {INDIAN_STATES.map(s => <SelectItem key={s.code} value={s.code}>{s.code} - {s.name}</SelectItem>)}
                   </SelectContent>
