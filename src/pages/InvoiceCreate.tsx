@@ -113,6 +113,38 @@ const newCustomerSchema = z.object({
   state_code: z.string().min(2, "Select state"),
 });
 
+// Per-line validation. We re-derive taxable/tax from primitive inputs so that
+// stale/tampered numeric fields cannot bypass GST math.
+const lineItemSchema = z
+  .object({
+    description: z.string().trim().min(1, "Description is required").max(500, "Max 500 characters"),
+    hsn_sac: z.string().trim().max(10, "Max 10 chars").optional().or(z.literal("")),
+    quantity: z.number({ invalid_type_error: "Quantity must be a number" })
+      .positive("Quantity must be greater than zero")
+      .max(1_000_000, "Quantity too large"),
+    rate: z.number({ invalid_type_error: "Rate must be a number" })
+      .nonnegative("Rate cannot be negative")
+      .max(1_00_00_00_000, "Rate too large"),
+    discount_percent: z.number().min(0, "Discount cannot be negative").max(100, "Discount cannot exceed 100%"),
+    gst_rate: z.number().refine((v) => GST_RATES.includes(v as typeof GST_RATES[number]), {
+      message: "GST rate must be a standard slab",
+    }),
+    taxable_value: z.number().nonnegative(),
+    cgst: z.number().nonnegative(),
+    sgst: z.number().nonnegative(),
+    igst: z.number().nonnegative(),
+  })
+  .superRefine((l, ctx) => {
+    const expectedTaxable = +(l.quantity * l.rate * (1 - l.discount_percent / 100)).toFixed(2);
+    if (Math.abs(expectedTaxable - +l.taxable_value.toFixed(2)) > 0.05) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["taxable_value"],
+        message: `Taxable value mismatch (expected ₹${expectedTaxable.toFixed(2)})`,
+      });
+    }
+  });
+
 type FieldErrors = Record<string, string>;
 
 function FieldError({ message }: { message?: string }) {
