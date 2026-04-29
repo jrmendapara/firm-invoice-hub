@@ -1,20 +1,18 @@
-import { ChangeEvent, useEffect, useRef, useState } from "react";
+import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/contexts/CompanyContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { GST_RATES, UNITS } from "@/lib/indian-states";
-import { Pencil, Plus, Search, Upload, Package } from "lucide-react";
+import { Pencil, Plus, Upload, Package } from "lucide-react";
 import { Database } from "@/integrations/supabase/types";
 import * as XLSX from "xlsx";
-import { EmptyState } from "@/components/common/EmptyState";
 import { PageHeader } from "@/components/common/PageHeader";
+import { DataTable, DataTableColumn } from "@/components/common/DataTable";
 
 type Item = Database["public"]["Tables"]["items"]["Row"];
 
@@ -32,7 +30,8 @@ export default function Items() {
   const { selectedCompany } = useCompany();
   const { toast } = useToast();
   const [items, setItems] = useState<Item[]>([]);
-  const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [gstFilter, setGstFilter] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
@@ -157,7 +156,67 @@ export default function Items() {
     }
   };
 
-  const filtered = items.filter((i) => i.name.toLowerCase().includes(search.toLowerCase()) || (i.hsn_sac || "").includes(search));
+  const visibleItems = useMemo(
+    () =>
+      items.filter(
+        (i) =>
+          (typeFilter === "all" || i.item_type === typeFilter) &&
+          (gstFilter === "all" || String(i.gst_rate) === gstFilter),
+      ),
+    [items, typeFilter, gstFilter],
+  );
+
+  const columns: DataTableColumn<Item>[] = [
+    {
+      id: "name",
+      header: "Name",
+      cell: (i) => <span className="font-medium">{i.name}</span>,
+      sortAccessor: (i) => i.name,
+    },
+    {
+      id: "hsn",
+      header: "HSN/SAC",
+      cell: (i) => <span className="font-mono text-sm">{i.hsn_sac || "-"}</span>,
+      sortAccessor: (i) => i.hsn_sac || "",
+    },
+    {
+      id: "unit",
+      header: "Unit",
+      cell: (i) => i.unit,
+      sortAccessor: (i) => i.unit,
+      hideOnMobile: true,
+    },
+    {
+      id: "gst",
+      header: "GST Rate",
+      cell: (i) => <span className="tabular-nums">{i.gst_rate}%</span>,
+      sortAccessor: (i) => Number(i.gst_rate),
+    },
+    {
+      id: "price",
+      header: "Price",
+      cell: (i) => <span className="tabular-nums">{i.default_price ? `₹${i.default_price}` : "-"}</span>,
+      sortAccessor: (i) => Number(i.default_price || 0),
+    },
+    {
+      id: "type",
+      header: "Type",
+      cell: (i) => <span className="capitalize">{i.item_type}</span>,
+      sortAccessor: (i) => i.item_type,
+      hideOnMobile: true,
+    },
+    {
+      id: "actions",
+      header: <span className="sr-only">Actions</span>,
+      className: "text-right w-[1%] whitespace-nowrap",
+      cell: (i) => (
+        <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); openEdit(i); }}>
+          <Pencil className="mr-1 h-3.5 w-3.5" /> Edit
+        </Button>
+      ),
+      hideOnMobile: true,
+    },
+  ];
 
   if (!selectedCompany) return <p className="text-muted-foreground">Please select a company first.</p>;
 
@@ -197,51 +256,52 @@ export default function Items() {
         </>}
       />
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input className="pl-9" placeholder="Search by name or HSN/SAC..." value={search} onChange={(e) => setSearch(e.target.value)} />
-      </div>
-
-      <Card>
-        <CardContent className="p-0 overflow-x-auto">
-          <Table className="min-w-[860px]">
-            <TableHeader className="bg-muted/40">
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>HSN/SAC</TableHead>
-                <TableHead>Unit</TableHead>
-                <TableHead>GST Rate</TableHead>
-                <TableHead>Price</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={7} className="p-0">
-                  <EmptyState
-                    icon={Package}
-                    title="No items yet"
-                    description={search ? "Try a different search term." : "Add items to use them on invoices."}
-                  />
-                </TableCell></TableRow>
-              ) : (
-                filtered.map((item) => (
-                  <TableRow key={item.id} className="even:bg-muted/30 hover:bg-accent/60">
-                    <TableCell className="font-medium">{item.name}</TableCell>
-                    <TableCell className="font-mono text-sm">{item.hsn_sac || "-"}</TableCell>
-                    <TableCell>{item.unit}</TableCell>
-                    <TableCell className="tabular-nums">{item.gst_rate}%</TableCell>
-                    <TableCell className="tabular-nums">{item.default_price ? `₹${item.default_price}` : "-"}</TableCell>
-                    <TableCell className="capitalize">{item.item_type}</TableCell>
-                    <TableCell className="text-right"><Button size="sm" variant="outline" onClick={() => openEdit(item)}><Pencil className="mr-1 h-3.5 w-3.5" /> Edit</Button></TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      <DataTable
+        data={visibleItems}
+        columns={columns}
+        rowKey={(i) => i.id}
+        onRowClick={(i) => openEdit(i)}
+        searchPlaceholder="Search by name or HSN/SAC..."
+        searchAccessor={(i) => `${i.name} ${i.hsn_sac || ""} ${i.description || ""}`}
+        filters={[
+          {
+            id: "type",
+            label: "Type",
+            value: typeFilter,
+            onChange: setTypeFilter,
+            options: [
+              { value: "all", label: "All types" },
+              { value: "goods", label: "Goods" },
+              { value: "services", label: "Services" },
+            ],
+          },
+          {
+            id: "gst",
+            label: "GST Rate",
+            value: gstFilter,
+            onChange: setGstFilter,
+            options: [
+              { value: "all", label: "All rates" },
+              ...GST_RATES.map((r) => ({ value: String(r), label: `${r}%` })),
+            ],
+          },
+        ]}
+        initialSort={{ columnId: "name", direction: "asc" }}
+        empty={{
+          icon: Package,
+          title: "No items yet",
+          description: "Add items to use them on invoices, or adjust your filters.",
+        }}
+        mobileTitle={(i) => i.name}
+        mobileSubtitle={(i) => `${i.hsn_sac || "—"} • ${i.unit}`}
+        mobileAside={(i) => (
+          <div className="flex flex-col items-end">
+            {i.default_price && <span className="font-semibold tabular-nums">₹{i.default_price}</span>}
+            <span className="text-[11px] text-muted-foreground tabular-nums">{i.gst_rate}% GST</span>
+          </div>
+        )}
+        minWidth={860}
+      />
     </div>
   );
 }
