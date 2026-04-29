@@ -6,13 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table";
+import { TableCell, TableRow } from "@/components/ui/table";
 import { formatINR, formatDate } from "@/lib/indian-states";
 import { Download, ClipboardList } from "lucide-react";
 import * as XLSX from "xlsx";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { EmptyState } from "@/components/common/EmptyState";
 import { PageHeader } from "@/components/common/PageHeader";
+import { DataTable, DataTableColumn } from "@/components/common/DataTable";
 
 export default function SalesRegister() {
   const { selectedCompany } = useCompany();
