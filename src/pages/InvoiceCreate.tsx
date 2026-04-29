@@ -297,6 +297,18 @@ export default function InvoiceCreate() {
     }
     if (upper.length === 15 && !validateGSTIN(upper)) {
       setCustErrors((p) => ({ ...p, gstin: "Invalid GSTIN format" }));
+      return;
+    }
+    if (upper.length === 15 && validateGSTIN(upper)) {
+      const dup = customers.find(
+        (c) => (c.gstin || "").toUpperCase() === upper
+      );
+      if (dup) {
+        setCustErrors((p) => ({
+          ...p,
+          gstin: `GSTIN already exists for "${dup.trade_name}"`,
+        }));
+      }
     }
   };
 
@@ -321,6 +333,19 @@ export default function InvoiceCreate() {
       });
       setCustErrors(fieldErr);
       return;
+    }
+    // Duplicate GSTIN guard within the same company
+    const trimmedGstin = newCustomerGstin.trim().toUpperCase();
+    if (trimmedGstin) {
+      const dup = customers.find(
+        (c) => (c.gstin || "").toUpperCase() === trimmedGstin
+      );
+      if (dup) {
+        setCustErrors({
+          gstin: `GSTIN already exists for "${dup.trade_name}"`,
+        });
+        return;
+      }
     }
     setCustErrors({});
 
