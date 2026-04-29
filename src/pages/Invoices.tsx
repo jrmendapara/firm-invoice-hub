@@ -117,8 +117,8 @@ export default function Invoices() {
             place_of_supply_code: posCode,
             place_of_supply_state: posState,
             status: ["draft", "final", "cancelled"].includes(String(r.status || "").toLowerCase())
-              ? String(r.status).toLowerCase()
-              : "final",
+              ? (String(r.status).toLowerCase() as "draft" | "final" | "cancelled")
+              : ("final" as const),
             discount_amount: Number(r.discount_amount || 0),
             round_off: Number(r.round_off || 0),
             total_taxable_value: totalTaxable,

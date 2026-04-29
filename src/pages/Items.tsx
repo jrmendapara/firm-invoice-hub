@@ -133,7 +133,7 @@ export default function Items() {
           unit: String(r.unit || r.Unit || "Nos").trim() || "Nos",
           gst_rate: Number(r.gst_rate || r["GST Rate"] || r["GST%"] || 18),
           default_price: r.default_price === "" ? null : Number(r.default_price || r.Price || 0),
-          item_type: String(r.item_type || r.Type || "goods").toLowerCase() === "services" ? "services" : "goods",
+          item_type: (String(r.item_type || r.Type || "goods").toLowerCase() === "services" ? "services" : "goods") as "goods" | "services",
           description: String(r.description || r.Description || "").trim() || null,
           is_active: true,
         }))
