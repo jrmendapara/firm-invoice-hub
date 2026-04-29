@@ -498,10 +498,60 @@ export default function InvoiceCreate() {
         if (i.path[0]) fieldErr[String(i.path[0])] = i.message;
       });
     }
-    const validLines = lines.filter((l) => l.description.trim());
-    if (validLines.length === 0) fieldErr.lines = "Add at least one line item with a description";
-    const badQty = lines.find((l) => l.description.trim() && l.quantity <= 0);
-    if (badQty) fieldErr.lines = "Quantity must be greater than zero";
+    const populatedLines = lines.filter(
+      (l) => l.description.trim() || l.quantity > 0 || l.rate > 0,
+    );
+    if (populatedLines.length === 0) {
+      fieldErr.lines = "Add at least one line item with a description";
+    } else {
+      const lineMessages: string[] = [];
+      populatedLines.forEach((l, idx) => {
+        const res = lineItemSchema.safeParse(l);
+        if (!res.success) {
+          const first = res.error.issues[0];
+          lineMessages.push(`Line ${idx + 1}: ${first.message}`);
+        }
+        // Tax-split sanity: in inter-state, CGST/SGST must be zero; in intra, IGST must be zero
+        if (isInterState && (l.cgst > 0.01 || l.sgst > 0.01)) {
+          lineMessages.push(`Line ${idx + 1}: Inter-state supply must use IGST only`);
+        }
+        if (!isInterState && l.igst > 0.01) {
+          lineMessages.push(`Line ${idx + 1}: Intra-state supply must use CGST + SGST`);
+        }
+      });
+
+      // Reconcile header grand total against re-derived line totals
+      const recomputed = populatedLines.reduce(
+        (acc, l) => {
+          const taxable = +(l.quantity * l.rate * (1 - l.discount_percent / 100)).toFixed(2);
+          const taxAmt = +(taxable * (l.gst_rate / 100)).toFixed(2);
+          return {
+            taxable: acc.taxable + taxable,
+            cgst: acc.cgst + (isInterState ? 0 : taxAmt / 2),
+            sgst: acc.sgst + (isInterState ? 0 : taxAmt / 2),
+            igst: acc.igst + (isInterState ? taxAmt : 0),
+            total: acc.total + taxable + taxAmt,
+          };
+        },
+        { taxable: 0, cgst: 0, sgst: 0, igst: 0, total: 0 },
+      );
+      const expectedGrand = +(recomputed.total - discountAmount + roundOff).toFixed(2);
+      const tolerance = 0.05; // 5 paise rounding tolerance
+      if (Math.abs(expectedGrand - +grandTotal.toFixed(2)) > tolerance) {
+        lineMessages.push(
+          `Totals do not reconcile (expected ₹${expectedGrand.toFixed(2)}, got ₹${grandTotal.toFixed(2)})`,
+        );
+      }
+      if (Math.abs(recomputed.cgst - totals.cgst) > tolerance ||
+          Math.abs(recomputed.sgst - totals.sgst) > tolerance ||
+          Math.abs(recomputed.igst - totals.igst) > tolerance) {
+        lineMessages.push("CGST/SGST/IGST totals do not reconcile with line items");
+      }
+
+      if (lineMessages.length) {
+        fieldErr.lines = lineMessages.slice(0, 3).join(" • ");
+      }
+    }
 
     setErrors(fieldErr);
     return Object.keys(fieldErr).length === 0;
