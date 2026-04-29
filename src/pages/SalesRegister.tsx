@@ -180,72 +180,138 @@ export default function SalesRegister() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardContent className="p-0 overflow-x-auto">
-          <Table className="min-w-[1200px]">
-            <TableHeader className="bg-muted/40">
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Invoice No</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead>GSTIN</TableHead>
-                <TableHead>State</TableHead>
-                <TableHead className="text-right">Taxable</TableHead>
-                <TableHead className="text-right">CGST</TableHead>
-                <TableHead className="text-right">SGST</TableHead>
-                <TableHead className="text-right">IGST</TableHead>
-                <TableHead className="text-right">Total Tax</TableHead>
-                <TableHead className="text-right">Total</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {invoices.length === 0 ? (
-                <TableRow><TableCell colSpan={12} className="p-0">
-                  <EmptyState
-                    icon={ClipboardList}
-                    title={loading ? "Loading..." : "No invoices found"}
-                    description={loading ? undefined : "Try adjusting the date range or filters."}
-                  />
-                </TableCell></TableRow>
-              ) : (
-                invoices.map(inv => (
-                  <TableRow key={inv.id} className="even:bg-muted/30 hover:bg-accent/60">
-                    <TableCell className="text-sm">{formatDate(inv.invoice_date)}</TableCell>
-                    <TableCell className="font-medium text-sm">{inv.invoice_number}</TableCell>
-                    <TableCell className="text-sm">{inv.customers?.trade_name || "-"}</TableCell>
-                    <TableCell className="font-mono text-xs">{inv.customers?.gstin || "-"}</TableCell>
-                    <TableCell className="text-sm">{inv.place_of_supply_state}</TableCell>
-                    <TableCell className="text-right text-sm tabular-nums">{formatINR(inv.total_taxable_value)}</TableCell>
-                    <TableCell className="text-right text-sm tabular-nums">{formatINR(inv.total_cgst)}</TableCell>
-                    <TableCell className="text-right text-sm tabular-nums">{formatINR(inv.total_sgst)}</TableCell>
-                    <TableCell className="text-right text-sm tabular-nums">{formatINR(inv.total_igst)}</TableCell>
-                    <TableCell className="text-right text-sm tabular-nums">{formatINR(inv.total_tax)}</TableCell>
-                    <TableCell className="text-right text-sm font-medium tabular-nums">{formatINR(inv.total_amount)}</TableCell>
-                    <TableCell>
-                      <StatusBadge status={inv.status} />
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-            {invoices.length > 0 && (
-              <TableFooter>
-                <TableRow className="bg-muted/60 font-bold">
-                  <TableCell colSpan={5}>TOTAL</TableCell>
-                  <TableCell className="text-right tabular-nums">{formatINR(totals.taxable)}</TableCell>
-                  <TableCell className="text-right tabular-nums">{formatINR(totals.cgst)}</TableCell>
-                  <TableCell className="text-right tabular-nums">{formatINR(totals.sgst)}</TableCell>
-                  <TableCell className="text-right tabular-nums">{formatINR(totals.igst)}</TableCell>
-                  <TableCell className="text-right tabular-nums">{formatINR(totals.tax)}</TableCell>
-                  <TableCell className="text-right tabular-nums">{formatINR(totals.total)}</TableCell>
-                  <TableCell></TableCell>
-                </TableRow>
-              </TableFooter>
-            )}
-          </Table>
-        </CardContent>
-      </Card>
+      <DataTable
+        data={invoices}
+        columns={[
+          {
+            id: "invoice_date",
+            header: "Date",
+            cell: (inv) => <span className="text-sm">{formatDate(inv.invoice_date)}</span>,
+            sortAccessor: (inv) => inv.invoice_date,
+          },
+          {
+            id: "invoice_number",
+            header: "Invoice No",
+            cell: (inv) => <span className="text-sm font-medium">{inv.invoice_number}</span>,
+            sortAccessor: (inv) => inv.invoice_number,
+          },
+          {
+            id: "customer",
+            header: "Customer",
+            cell: (inv) => <span className="text-sm">{inv.customers?.trade_name || "-"}</span>,
+            sortAccessor: (inv) => inv.customers?.trade_name || "",
+          },
+          {
+            id: "gstin",
+            header: "GSTIN",
+            cell: (inv) => <span className="font-mono text-xs">{inv.customers?.gstin || "-"}</span>,
+            hideOnMobile: true,
+          },
+          {
+            id: "state",
+            header: "State",
+            cell: (inv) => <span className="text-sm">{inv.place_of_supply_state}</span>,
+            sortAccessor: (inv) => inv.place_of_supply_state || "",
+            hideOnMobile: true,
+          },
+          {
+            id: "taxable",
+            header: "Taxable",
+            className: "text-right",
+            cell: (inv) => <span className="text-sm tabular-nums">{formatINR(inv.total_taxable_value)}</span>,
+            sortAccessor: (inv) => Number(inv.total_taxable_value || 0),
+            hideOnMobile: true,
+          },
+          {
+            id: "cgst",
+            header: "CGST",
+            className: "text-right",
+            cell: (inv) => <span className="text-sm tabular-nums">{formatINR(inv.total_cgst)}</span>,
+            sortAccessor: (inv) => Number(inv.total_cgst || 0),
+            hideOnMobile: true,
+          },
+          {
+            id: "sgst",
+            header: "SGST",
+            className: "text-right",
+            cell: (inv) => <span className="text-sm tabular-nums">{formatINR(inv.total_sgst)}</span>,
+            sortAccessor: (inv) => Number(inv.total_sgst || 0),
+            hideOnMobile: true,
+          },
+          {
+            id: "igst",
+            header: "IGST",
+            className: "text-right",
+            cell: (inv) => <span className="text-sm tabular-nums">{formatINR(inv.total_igst)}</span>,
+            sortAccessor: (inv) => Number(inv.total_igst || 0),
+            hideOnMobile: true,
+          },
+          {
+            id: "total_tax",
+            header: "Total Tax",
+            className: "text-right",
+            cell: (inv) => <span className="text-sm tabular-nums">{formatINR(inv.total_tax)}</span>,
+            sortAccessor: (inv) => Number(inv.total_tax || 0),
+            hideOnMobile: true,
+          },
+          {
+            id: "total",
+            header: "Total",
+            className: "text-right",
+            cell: (inv) => <span className="text-sm font-medium tabular-nums">{formatINR(inv.total_amount)}</span>,
+            sortAccessor: (inv) => Number(inv.total_amount || 0),
+          },
+          {
+            id: "status",
+            header: "Status",
+            cell: (inv) => <StatusBadge status={inv.status} />,
+            sortAccessor: (inv) => inv.status,
+            hideOnMobile: true,
+          },
+        ] as DataTableColumn<any>[]}
+        rowKey={(inv) => inv.id}
+        searchable={false}
+        initialSort={{ columnId: "invoice_date", direction: "asc" }}
+        empty={{
+          icon: ClipboardList,
+          title: loading ? "Loading..." : "No invoices found",
+          description: loading ? undefined : "Try adjusting the date range or filters.",
+        }}
+        mobileTitle={(inv) => inv.invoice_number}
+        mobileSubtitle={(inv) => `${inv.customers?.trade_name || "—"} • ${formatDate(inv.invoice_date)}`}
+        mobileAside={(inv) => (
+          <div className="flex flex-col items-end gap-1.5">
+            <span className="font-semibold tabular-nums">{formatINR(inv.total_amount)}</span>
+            <StatusBadge status={inv.status} />
+          </div>
+        )}
+        footer={(rows) => {
+          const t = rows.reduce(
+            (acc, i) => ({
+              taxable: acc.taxable + Number(i.total_taxable_value || 0),
+              cgst: acc.cgst + Number(i.total_cgst || 0),
+              sgst: acc.sgst + Number(i.total_sgst || 0),
+              igst: acc.igst + Number(i.total_igst || 0),
+              tax: acc.tax + Number(i.total_tax || 0),
+              total: acc.total + Number(i.total_amount || 0),
+            }),
+            { taxable: 0, cgst: 0, sgst: 0, igst: 0, tax: 0, total: 0 },
+          );
+          return (
+            <TableRow className="bg-muted/60 font-bold">
+              <TableCell colSpan={5}>TOTAL ({rows.length})</TableCell>
+              <TableCell className="text-right tabular-nums">{formatINR(t.taxable)}</TableCell>
+              <TableCell className="text-right tabular-nums">{formatINR(t.cgst)}</TableCell>
+              <TableCell className="text-right tabular-nums">{formatINR(t.sgst)}</TableCell>
+              <TableCell className="text-right tabular-nums">{formatINR(t.igst)}</TableCell>
+              <TableCell className="text-right tabular-nums">{formatINR(t.tax)}</TableCell>
+              <TableCell className="text-right tabular-nums">{formatINR(t.total)}</TableCell>
+              <TableCell></TableCell>
+            </TableRow>
+          );
+        }}
+        minWidth={1200}
+      />
     </div>
   );
 }
