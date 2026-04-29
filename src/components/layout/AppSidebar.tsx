@@ -1,7 +1,7 @@
 import { NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, FileText, Users, Package, Building2,
-  LogOut, ChevronDown, ClipboardList, ShieldCheck, UserCog, Check,
+  LogOut, ClipboardList, ShieldCheck, UserCog,
 } from "lucide-react";
 import { LucideIcon } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -11,10 +11,8 @@ import {
   SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { CompanySwitcher } from "./CompanySwitcher";
 
 type NavItem = {
   title: string;
@@ -67,7 +65,7 @@ function isItemActive(pathname: string, item: NavItem): boolean {
 export function AppSidebar() {
   const { pathname } = useLocation();
   const { isAdmin, isSuperAdmin, profile, roles, signOut } = useAuth();
-  const { companies, selectedCompany, setSelectedCompanyId } = useCompany();
+  const { selectedCompany } = useCompany();
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
 
@@ -91,26 +89,14 @@ export function AppSidebar() {
           )}
         </div>
 
-        {!collapsed && companies.length > 0 && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="mt-4 flex w-full items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-left text-sm text-white/90 transition-all hover:bg-white/10">
-                <div className="min-w-0">
-                  <p className="truncate text-[11px] font-medium uppercase tracking-wider text-white/50">Active Company</p>
-                  <p className="truncate text-sm text-white">{selectedCompany?.name || "Select Company"}</p>
-                </div>
-                <ChevronDown className="h-4 w-4 shrink-0 opacity-70" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-64 rounded-lg border-border bg-popover">
-              {companies.map(c => (
-                <DropdownMenuItem key={c.id} onClick={() => setSelectedCompanyId(c.id)} className="flex items-center justify-between gap-2">
-                  <span className="truncate">{c.name}</span>
-                  {selectedCompany?.id === c.id && <Check className="h-4 w-4 text-primary" />}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+        {!collapsed && (
+          <div className="mt-4">
+            {/* Switcher hides itself if user has 0 or 1 companies. */}
+            <CompanySwitcher variant="sidebar" hideWhenSingle />
+            {selectedCompany && (
+              <div className="mt-2 hidden text-[11px] text-white/55 [&:has(+_*)]:block" />
+            )}
+          </div>
         )}
       </SidebarHeader>
 
