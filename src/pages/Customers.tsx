@@ -10,9 +10,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { INDIAN_STATES, validateGSTIN, getStateFromGSTIN } from "@/lib/indian-states";
-import { Pencil, Plus, Search, Upload } from "lucide-react";
+import { Pencil, Plus, Search, Upload, Users } from "lucide-react";
 import { Database } from "@/integrations/supabase/types";
 import * as XLSX from "xlsx";
+import { EmptyState } from "@/components/common/EmptyState";
+import { PageHeader } from "@/components/common/PageHeader";
 
 type Customer = Database["public"]["Tables"]["customers"]["Row"];
 type CustomerType = Database["public"]["Enums"]["customer_type"];
@@ -328,9 +330,10 @@ export default function Customers() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-display">Customers</h1>
-        <div className="flex gap-2">
+      <PageHeader
+        title="Customers"
+        description="Buyers you bill — registered, unregistered, export and SEZ."
+        actions={<>
           <input ref={importInputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImportCustomers} />
           <Button variant="outline" onClick={handleImportCustomersClick}>
             <Upload className="mr-2 h-4 w-4" />Import Excel
@@ -391,8 +394,8 @@ export default function Customers() {
               </form>
             </DialogContent>
           </Dialog>
-        </div>
-      </div>
+        </>}
+      />
 
       <div className="relative">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -402,7 +405,7 @@ export default function Customers() {
       <Card>
         <CardContent className="p-0 overflow-x-auto">
           <Table className="min-w-[860px]">
-            <TableHeader>
+            <TableHeader className="bg-muted/40">
               <TableRow>
                 <TableHead>Trade Name</TableHead>
                 <TableHead>GSTIN</TableHead>
@@ -414,10 +417,16 @@ export default function Customers() {
             </TableHeader>
             <TableBody>
               {filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">No customers found</TableCell></TableRow>
+                <TableRow><TableCell colSpan={6} className="p-0">
+                  <EmptyState
+                    icon={Users}
+                    title="No customers found"
+                    description={search ? "Try a different search term." : "Add your first customer to start invoicing."}
+                  />
+                </TableCell></TableRow>
               ) : (
                 filtered.map((c) => (
-                  <TableRow key={c.id}>
+                  <TableRow key={c.id} className="even:bg-muted/30 hover:bg-accent/60">
                     <TableCell className="font-medium">{c.trade_name}</TableCell>
                     <TableCell className="font-mono text-sm">{c.gstin || "-"}</TableCell>
                     <TableCell>{c.billing_state_name || "-"}</TableCell>
