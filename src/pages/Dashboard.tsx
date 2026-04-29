@@ -5,7 +5,10 @@ import { Button } from "@/components/ui/button";
 import { useCompany } from "@/contexts/CompanyContext";
 import { supabase } from "@/integrations/supabase/client";
 import { formatINR, formatDate } from "@/lib/indian-states";
-import { FileText, Plus, Users, Download, IndianRupee, FileClock } from "lucide-react";
+import { FileText, Plus, Users, IndianRupee, FileClock, Package, ClipboardList, Building2 } from "lucide-react";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { EmptyState } from "@/components/common/EmptyState";
+import { PageHeader } from "@/components/common/PageHeader";
 
 interface DashboardStats {
   totalInvoices: number;
@@ -44,96 +47,105 @@ export default function Dashboard() {
 
   if (!selectedCompany) {
     return (
-      <div className="flex h-[50vh] items-center justify-center">
-        <div className="text-center text-muted-foreground">
-          <Building2Icon className="mx-auto mb-4 h-12 w-12" />
-          <p className="text-lg">No company selected. Please select or create a company.</p>
-        </div>
-      </div>
+      <Card>
+        <EmptyState
+          icon={Building2}
+          title="No company selected"
+          description="Select an existing company from the sidebar or create your first one to get started."
+          action={
+            <Button asChild>
+              <Link to="/companies"><Plus className="mr-2 h-4 w-4" />Manage Companies</Link>
+            </Button>
+          }
+        />
+      </Card>
     );
   }
 
+  const statCards = [
+    { label: "Total Invoices", value: stats.totalInvoices, icon: FileText, accent: "blue" },
+    { label: "Total Sales", value: formatINR(stats.totalSales), icon: IndianRupee, accent: "emerald" },
+    { label: "GST Collected", value: formatINR(stats.totalTax), icon: IndianRupee, accent: "violet" },
+    { label: "Pending Drafts", value: stats.pendingDrafts, icon: FileClock, accent: "amber" },
+  ] as const;
+
+  const accentBg: Record<string, string> = {
+    blue: "bg-[hsl(var(--accent-blue)/0.12)] text-[hsl(var(--accent-blue))]",
+    emerald: "bg-[hsl(var(--accent-emerald)/0.12)] text-[hsl(var(--accent-emerald))]",
+    violet: "bg-[hsl(var(--accent-violet)/0.12)] text-[hsl(var(--accent-violet))]",
+    amber: "bg-[hsl(var(--accent-amber)/0.15)] text-[hsl(var(--accent-amber))]",
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-display text-foreground">{selectedCompany.name}</h1>
-          <p className="text-sm text-muted-foreground">GSTIN: {selectedCompany.gstin || "N/A"}</p>
-        </div>
-        <div className="flex gap-2">
+      <PageHeader
+        title={selectedCompany.name}
+        description={`GSTIN: ${selectedCompany.gstin || "N/A"}`}
+        actions={
           <Button asChild>
             <Link to="/invoices/new"><Plus className="mr-2 h-4 w-4" />New Invoice</Link>
           </Button>
-        </div>
-      </div>
+        }
+      />
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Invoices</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalInvoices}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Sales</CardTitle>
-            <IndianRupee className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatINR(stats.totalSales)}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">GST Collected</CardTitle>
-            <IndianRupee className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatINR(stats.totalTax)}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Pending Drafts</CardTitle>
-            <FileClock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.pendingDrafts}</div>
-          </CardContent>
-        </Card>
+        {statCards.map((s) => (
+          <Card key={s.label} className="transition-shadow hover:shadow-md">
+            <CardContent className="flex items-center gap-4 p-5">
+              <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg ${accentBg[s.accent]}`}>
+                <s.icon className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{s.label}</p>
+                <p className="mt-1 truncate text-xl font-semibold tabular-nums text-foreground">{s.value}</p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Recent Invoices</CardTitle>
+          <CardTitle className="text-base">Quick actions</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-wrap gap-2">
+          <Button asChild variant="outline"><Link to="/invoices/new"><Plus className="mr-2 h-4 w-4" />New Invoice</Link></Button>
+          <Button asChild variant="outline"><Link to="/customers"><Users className="mr-2 h-4 w-4" />Add Customer</Link></Button>
+          <Button asChild variant="outline"><Link to="/items"><Package className="mr-2 h-4 w-4" />Add Item</Link></Button>
+          <Button asChild variant="outline"><Link to="/sales-register"><ClipboardList className="mr-2 h-4 w-4" />Sales Register</Link></Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base">Recent Invoices</CardTitle>
+            <Link to="/invoices" className="text-sm font-medium text-primary hover:underline">View all</Link>
+          </div>
         </CardHeader>
         <CardContent>
           {recentInvoices.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No invoices yet. Create your first invoice!</p>
+            <EmptyState
+              icon={FileText}
+              title="No invoices yet"
+              description="Create your first invoice to see it here."
+              action={<Button asChild><Link to="/invoices/new"><Plus className="mr-2 h-4 w-4" />New Invoice</Link></Button>}
+            />
           ) : (
             <div className="space-y-3">
               {recentInvoices.map(inv => (
                 <Link
                   key={inv.id}
                   to={`/invoices/${inv.id}`}
-                  className="flex flex-col gap-2 rounded-lg border border-border p-3 transition-colors hover:bg-accent sm:flex-row sm:items-center sm:justify-between"
+                  className="flex flex-col gap-2 rounded-lg border border-border/70 p-3 transition-colors hover:border-primary/30 hover:bg-accent/60 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div>
                     <p className="font-medium">{inv.invoice_number}</p>
                     <p className="text-sm text-muted-foreground">{inv.customers?.trade_name} • {formatDate(inv.invoice_date)}</p>
                   </div>
-                  <div className="text-right">
-                    <p className="font-medium">{formatINR(inv.total_amount)}</p>
-                    <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
-                      inv.status === 'final' ? 'bg-green-100 text-green-800' :
-                      inv.status === 'draft' ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-red-100 text-red-800'
-                    }`}>
-                      {inv.status}
-                    </span>
+                  <div className="flex items-center gap-3 sm:flex-col sm:items-end">
+                    <p className="font-medium tabular-nums">{formatINR(inv.total_amount)}</p>
+                    <StatusBadge status={inv.status} />
                   </div>
                 </Link>
               ))}
@@ -145,10 +157,3 @@ export default function Dashboard() {
   );
 }
 
-function Building2Icon({ className }: { className?: string }) {
-  return (
-    <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/>
-    </svg>
-  );
-}

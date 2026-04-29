@@ -11,6 +11,10 @@ import { formatINR, formatDate, getCurrentFinancialYear, INDIAN_STATES, numberTo
 import { Pencil, Plus, Search, Trash2, Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import * as XLSX from "xlsx";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { EmptyState } from "@/components/common/EmptyState";
+import { PageHeader } from "@/components/common/PageHeader";
+import { FileText } from "lucide-react";
 
 export default function Invoices() {
   const { selectedCompany } = useCompany();
@@ -117,8 +121,8 @@ export default function Invoices() {
             place_of_supply_code: posCode,
             place_of_supply_state: posState,
             status: ["draft", "final", "cancelled"].includes(String(r.status || "").toLowerCase())
-              ? String(r.status).toLowerCase()
-              : "final",
+              ? (String(r.status).toLowerCase() as "draft" | "final" | "cancelled")
+              : ("final" as const),
             discount_amount: Number(r.discount_amount || 0),
             round_off: Number(r.round_off || 0),
             total_taxable_value: totalTaxable,
@@ -159,20 +163,21 @@ export default function Invoices() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-display">Invoices</h1>
-        <div className="flex gap-2">
-          <input ref={importInputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImportInvoices} />
-          <Button variant="outline" onClick={handleImportInvoicesClick}>
-            <Upload className="mr-2 h-4 w-4" />Import Excel
-          </Button>
-          <Button asChild>
-            <Link to="/invoices/new">
-              <Plus className="mr-2 h-4 w-4" />New Invoice
-            </Link>
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Invoices"
+        description="Manage all your sales invoices in one place."
+        actions={
+          <>
+            <input ref={importInputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImportInvoices} />
+            <Button variant="outline" onClick={handleImportInvoicesClick}>
+              <Upload className="mr-2 h-4 w-4" />Import Excel
+            </Button>
+            <Button asChild>
+              <Link to="/invoices/new"><Plus className="mr-2 h-4 w-4" />New Invoice</Link>
+            </Button>
+          </>
+        }
+      />
 
       <div className="relative">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -182,7 +187,7 @@ export default function Invoices() {
       <Card>
         <CardContent className="p-0 overflow-x-auto">
           <Table className="min-w-[980px]">
-            <TableHeader>
+            <TableHeader className="bg-muted/40">
               <TableRow>
                 <TableHead>Invoice #</TableHead>
                 <TableHead>Date</TableHead>
@@ -198,28 +203,29 @@ export default function Invoices() {
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center text-muted-foreground">
-                    No invoices found
+                  <TableCell colSpan={9} className="p-0">
+                    <EmptyState
+                      icon={FileText}
+                      title="No invoices found"
+                      description={search ? "Try a different search term." : "Create your first invoice to get started."}
+                      action={!search ? (
+                        <Button asChild><Link to="/invoices/new"><Plus className="mr-2 h-4 w-4" />New Invoice</Link></Button>
+                      ) : undefined}
+                    />
                   </TableCell>
                 </TableRow>
               ) : (
                 filtered.map((inv) => (
-                  <TableRow key={inv.id} className="cursor-pointer hover:bg-accent" onClick={() => navigate(`/invoices/${inv.id}`)}>
+                  <TableRow key={inv.id} className="cursor-pointer even:bg-muted/30 hover:bg-accent/60" onClick={() => navigate(`/invoices/${inv.id}`)}>
                     <TableCell className="font-medium">{inv.invoice_number}</TableCell>
                     <TableCell>{formatDate(inv.invoice_date)}</TableCell>
                     <TableCell>{inv.customers?.trade_name || "-"}</TableCell>
                     <TableCell className="font-mono text-sm">{inv.customers?.gstin || "-"}</TableCell>
-                    <TableCell className="text-right">{formatINR(inv.total_taxable_value)}</TableCell>
-                    <TableCell className="text-right">{formatINR(inv.total_tax)}</TableCell>
-                    <TableCell className="text-right font-medium">{formatINR(inv.total_amount)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{formatINR(inv.total_taxable_value)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{formatINR(inv.total_tax)}</TableCell>
+                    <TableCell className="text-right font-medium tabular-nums">{formatINR(inv.total_amount)}</TableCell>
                     <TableCell>
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                          inv.status === "final" ? "bg-green-100 text-green-800" : inv.status === "draft" ? "bg-yellow-100 text-yellow-800" : "bg-red-100 text-red-800"
-                        }`}
-                      >
-                        {inv.status}
-                      </span>
+                      <StatusBadge status={inv.status} />
                     </TableCell>
                     <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                       <div className="flex justify-end gap-1">

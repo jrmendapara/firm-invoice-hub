@@ -4,26 +4,26 @@
 
 @layer base {
   :root {
-    --background: 0 0% 94%;
-    --foreground: 0 0% 12%;
+    --background: 220 20% 97%;
+    --foreground: 222 25% 12%;
 
-    --card: 0 0% 92%;
-    --card-foreground: 0 0% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 25% 12%;
 
-    --popover: 0 0% 96%;
-    --popover-foreground: 0 0% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 25% 12%;
 
-    --primary: 0 0% 15%;
+    --primary: 220 65% 52%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 0 0% 88%;
-    --secondary-foreground: 0 0% 12%;
+    --secondary: 220 15% 94%;
+    --secondary-foreground: 222 25% 18%;
 
-    --muted: 0 0% 90%;
-    --muted-foreground: 0 0% 35%;
+    --muted: 220 15% 95%;
+    --muted-foreground: 220 10% 42%;
 
-    --accent: 0 0% 86%;
-    --accent-foreground: 0 0% 12%;
+    --accent: 220 30% 94%;
+    --accent-foreground: 222 25% 18%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
@@ -34,11 +34,25 @@
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
 
-    --border: 0 0% 55%;
-    --input: 0 0% 70%;
-    --ring: 0 0% 30%;
+    --border: 220 15% 88%;
+    --input: 220 15% 86%;
+    --ring: 220 65% 52%;
 
-    --radius: 0rem;
+    --radius: 0.625rem;
+
+    /* Semantic status tokens (bg + fg pairs) */
+    --status-final-bg: 142 71% 92%;
+    --status-final-fg: 142 72% 24%;
+    --status-draft-bg: 38 95% 90%;
+    --status-draft-fg: 30 80% 30%;
+    --status-cancelled-bg: 0 80% 94%;
+    --status-cancelled-fg: 0 70% 38%;
+
+    /* Stat card accents */
+    --accent-blue: 220 80% 55%;
+    --accent-emerald: 152 65% 42%;
+    --accent-violet: 262 70% 60%;
+    --accent-amber: 35 92% 50%;
 
     --sidebar-background: 220 25% 12%;
     --sidebar-foreground: 220 10% 85%;
@@ -117,5 +131,9 @@
   .font-display {
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     font-weight: 700;
+  }
+
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
   }
 }

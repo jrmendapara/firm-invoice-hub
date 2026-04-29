@@ -8,8 +8,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table";
 import { formatINR, formatDate } from "@/lib/indian-states";
-import { Download, Search } from "lucide-react";
+import { Download, ClipboardList } from "lucide-react";
 import * as XLSX from "xlsx";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { EmptyState } from "@/components/common/EmptyState";
+import { PageHeader } from "@/components/common/PageHeader";
 
 export default function SalesRegister() {
   const { selectedCompany } = useCompany();
@@ -119,12 +122,15 @@ export default function SalesRegister() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-display">Sales Register</h1>
-        <Button onClick={exportToExcel} disabled={invoices.length === 0}>
-          <Download className="mr-2 h-4 w-4" />Export Excel
-        </Button>
-      </div>
+      <PageHeader
+        title="Sales Register"
+        description={`${invoices.length} invoice${invoices.length === 1 ? "" : "s"} in selected range`}
+        actions={
+          <Button onClick={exportToExcel} disabled={invoices.length === 0}>
+            <Download className="mr-2 h-4 w-4" />Export Excel
+          </Button>
+        }
+      />
 
       <Card>
         <CardContent className="pt-4">
@@ -177,7 +183,7 @@ export default function SalesRegister() {
       <Card>
         <CardContent className="p-0 overflow-x-auto">
           <Table className="min-w-[1200px]">
-            <TableHeader>
+            <TableHeader className="bg-muted/40">
               <TableRow>
                 <TableHead>Date</TableHead>
                 <TableHead>Invoice No</TableHead>
@@ -195,29 +201,29 @@ export default function SalesRegister() {
             </TableHeader>
             <TableBody>
               {invoices.length === 0 ? (
-                <TableRow><TableCell colSpan={12} className="text-center text-muted-foreground py-8">
-                  {loading ? "Loading..." : "No invoices found for the selected filters"}
+                <TableRow><TableCell colSpan={12} className="p-0">
+                  <EmptyState
+                    icon={ClipboardList}
+                    title={loading ? "Loading..." : "No invoices found"}
+                    description={loading ? undefined : "Try adjusting the date range or filters."}
+                  />
                 </TableCell></TableRow>
               ) : (
                 invoices.map(inv => (
-                  <TableRow key={inv.id}>
+                  <TableRow key={inv.id} className="even:bg-muted/30 hover:bg-accent/60">
                     <TableCell className="text-sm">{formatDate(inv.invoice_date)}</TableCell>
                     <TableCell className="font-medium text-sm">{inv.invoice_number}</TableCell>
                     <TableCell className="text-sm">{inv.customers?.trade_name || "-"}</TableCell>
                     <TableCell className="font-mono text-xs">{inv.customers?.gstin || "-"}</TableCell>
                     <TableCell className="text-sm">{inv.place_of_supply_state}</TableCell>
-                    <TableCell className="text-right text-sm">{formatINR(inv.total_taxable_value)}</TableCell>
-                    <TableCell className="text-right text-sm">{formatINR(inv.total_cgst)}</TableCell>
-                    <TableCell className="text-right text-sm">{formatINR(inv.total_sgst)}</TableCell>
-                    <TableCell className="text-right text-sm">{formatINR(inv.total_igst)}</TableCell>
-                    <TableCell className="text-right text-sm">{formatINR(inv.total_tax)}</TableCell>
-                    <TableCell className="text-right text-sm font-medium">{formatINR(inv.total_amount)}</TableCell>
+                    <TableCell className="text-right text-sm tabular-nums">{formatINR(inv.total_taxable_value)}</TableCell>
+                    <TableCell className="text-right text-sm tabular-nums">{formatINR(inv.total_cgst)}</TableCell>
+                    <TableCell className="text-right text-sm tabular-nums">{formatINR(inv.total_sgst)}</TableCell>
+                    <TableCell className="text-right text-sm tabular-nums">{formatINR(inv.total_igst)}</TableCell>
+                    <TableCell className="text-right text-sm tabular-nums">{formatINR(inv.total_tax)}</TableCell>
+                    <TableCell className="text-right text-sm font-medium tabular-nums">{formatINR(inv.total_amount)}</TableCell>
                     <TableCell>
-                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                        inv.status === 'final' ? 'bg-green-100 text-green-800' :
-                        inv.status === 'draft' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-red-100 text-red-800'
-                      }`}>{inv.status}</span>
+                      <StatusBadge status={inv.status} />
                     </TableCell>
                   </TableRow>
                 ))
@@ -225,14 +231,14 @@ export default function SalesRegister() {
             </TableBody>
             {invoices.length > 0 && (
               <TableFooter>
-                <TableRow className="font-bold">
+                <TableRow className="bg-muted/60 font-bold">
                   <TableCell colSpan={5}>TOTAL</TableCell>
-                  <TableCell className="text-right">{formatINR(totals.taxable)}</TableCell>
-                  <TableCell className="text-right">{formatINR(totals.cgst)}</TableCell>
-                  <TableCell className="text-right">{formatINR(totals.sgst)}</TableCell>
-                  <TableCell className="text-right">{formatINR(totals.igst)}</TableCell>
-                  <TableCell className="text-right">{formatINR(totals.tax)}</TableCell>
-                  <TableCell className="text-right">{formatINR(totals.total)}</TableCell>
+                  <TableCell className="text-right tabular-nums">{formatINR(totals.taxable)}</TableCell>
+                  <TableCell className="text-right tabular-nums">{formatINR(totals.cgst)}</TableCell>
+                  <TableCell className="text-right tabular-nums">{formatINR(totals.sgst)}</TableCell>
+                  <TableCell className="text-right tabular-nums">{formatINR(totals.igst)}</TableCell>
+                  <TableCell className="text-right tabular-nums">{formatINR(totals.tax)}</TableCell>
+                  <TableCell className="text-right tabular-nums">{formatINR(totals.total)}</TableCell>
                   <TableCell></TableCell>
                 </TableRow>
               </TableFooter>

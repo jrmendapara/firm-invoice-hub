@@ -52,17 +52,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             try {
               const [rolesRes, profileRes] = await Promise.all([
                 withTimeout(
-                  supabase.from("user_roles").select("role").eq("user_id", session.user.id),
+                  Promise.resolve(supabase.from("user_roles").select("role").eq("user_id", session.user.id)),
                   4000
                 ),
                 withTimeout(
-                  supabase.from("profiles").select("full_name, email").eq("user_id", session.user.id).maybeSingle(),
+                  Promise.resolve(supabase.from("profiles").select("full_name, email").eq("user_id", session.user.id).maybeSingle()),
                   4000
                 ),
               ]);
 
-              setRoles((rolesRes.data || []).map((r) => r.role));
-              setProfile(profileRes.data ?? null);
+              setRoles(((rolesRes as any).data || []).map((r: any) => r.role));
+              setProfile((profileRes as any).data ?? null);
             } catch (err) {
               console.error("AuthContext profile/role fetch failed", err);
               setRoles([]);

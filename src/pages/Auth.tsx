@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { FileText, ShieldCheck, Sparkles } from "lucide-react";
+import { Eye, EyeOff, FileText, ShieldCheck, Sparkles } from "lucide-react";
 
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
@@ -13,6 +13,7 @@ export default function Auth() {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
 
   const withTimeout = async <T,>(promise: Promise<T>, timeoutMs = 12000): Promise<T> => {
@@ -127,6 +128,16 @@ export default function Auth() {
           </div>
         </div>
 
+        <div className="flex items-center gap-3 border-b border-white/15 bg-slate-900/50 p-4 text-white md:hidden">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-cyan-500">
+            <FileText className="h-4 w-4" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold">GST Invoice Manager</p>
+            <p className="text-xs text-white/70">Smart invoicing for modern firms</p>
+          </div>
+        </div>
+
         <div className="p-4 sm:p-8">
           <Card className="border-white/20 bg-white/90 shadow-xl backdrop-blur-sm">
             <CardHeader className="text-center px-4 sm:px-6">
@@ -167,15 +178,26 @@ export default function Auth() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    required
-                    minLength={6}
-                  />
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      required
+                      minLength={6}
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((s) => !s)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:text-foreground"
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? "Please wait..." : isLogin ? "Sign In" : "Sign Up"}
