@@ -10,9 +10,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { GST_RATES, UNITS } from "@/lib/indian-states";
-import { Pencil, Plus, Search, Upload } from "lucide-react";
+import { Pencil, Plus, Search, Upload, Package } from "lucide-react";
 import { Database } from "@/integrations/supabase/types";
 import * as XLSX from "xlsx";
+import { EmptyState } from "@/components/common/EmptyState";
+import { PageHeader } from "@/components/common/PageHeader";
 
 type Item = Database["public"]["Tables"]["items"]["Row"];
 
@@ -161,9 +163,10 @@ export default function Items() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-display">Items / Products</h1>
-        <div className="flex gap-2">
+      <PageHeader
+        title="Items / Products"
+        description="Catalog of goods and services with HSN/SAC and GST rates."
+        actions={<>
           <input ref={importInputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImportItems} />
           <Button variant="outline" onClick={handleImportItemsClick}>
             <Upload className="mr-2 h-4 w-4" />Import Excel
@@ -191,8 +194,8 @@ export default function Items() {
               </form>
             </DialogContent>
           </Dialog>
-        </div>
-      </div>
+        </>}
+      />
 
       <div className="relative">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -202,7 +205,7 @@ export default function Items() {
       <Card>
         <CardContent className="p-0 overflow-x-auto">
           <Table className="min-w-[860px]">
-            <TableHeader>
+            <TableHeader className="bg-muted/40">
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>HSN/SAC</TableHead>
@@ -215,15 +218,21 @@ export default function Items() {
             </TableHeader>
             <TableBody>
               {filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground">No items found</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="p-0">
+                  <EmptyState
+                    icon={Package}
+                    title="No items yet"
+                    description={search ? "Try a different search term." : "Add items to use them on invoices."}
+                  />
+                </TableCell></TableRow>
               ) : (
                 filtered.map((item) => (
-                  <TableRow key={item.id}>
+                  <TableRow key={item.id} className="even:bg-muted/30 hover:bg-accent/60">
                     <TableCell className="font-medium">{item.name}</TableCell>
                     <TableCell className="font-mono text-sm">{item.hsn_sac || "-"}</TableCell>
                     <TableCell>{item.unit}</TableCell>
-                    <TableCell>{item.gst_rate}%</TableCell>
-                    <TableCell>{item.default_price ? `₹${item.default_price}` : "-"}</TableCell>
+                    <TableCell className="tabular-nums">{item.gst_rate}%</TableCell>
+                    <TableCell className="tabular-nums">{item.default_price ? `₹${item.default_price}` : "-"}</TableCell>
                     <TableCell className="capitalize">{item.item_type}</TableCell>
                     <TableCell className="text-right"><Button size="sm" variant="outline" onClick={() => openEdit(item)}><Pencil className="mr-1 h-3.5 w-3.5" /> Edit</Button></TableCell>
                   </TableRow>
