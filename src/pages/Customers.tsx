@@ -1,20 +1,18 @@
-import { ChangeEvent, useEffect, useRef, useState } from "react";
+import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/contexts/CompanyContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { INDIAN_STATES, validateGSTIN, getStateFromGSTIN } from "@/lib/indian-states";
-import { Pencil, Plus, Search, Upload, Users } from "lucide-react";
+import { Pencil, Plus, Upload, Users } from "lucide-react";
 import { Database } from "@/integrations/supabase/types";
 import * as XLSX from "xlsx";
-import { EmptyState } from "@/components/common/EmptyState";
 import { PageHeader } from "@/components/common/PageHeader";
+import { DataTable, DataTableColumn } from "@/components/common/DataTable";
 
 type Customer = Database["public"]["Tables"]["customers"]["Row"];
 type CustomerType = Database["public"]["Enums"]["customer_type"];
@@ -37,7 +35,7 @@ export default function Customers() {
   const { selectedCompany } = useCompany();
   const { toast } = useToast();
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
@@ -322,9 +320,55 @@ export default function Customers() {
     }
   };
 
-  const filtered = customers.filter(
-    (c) => c.trade_name.toLowerCase().includes(search.toLowerCase()) || (c.gstin || "").toLowerCase().includes(search.toLowerCase()) || (c.mobile || "").includes(search)
+  const visibleCustomers = useMemo(
+    () => (typeFilter === "all" ? customers : customers.filter((c) => c.customer_type === typeFilter)),
+    [customers, typeFilter],
   );
+
+  const columns: DataTableColumn<Customer>[] = [
+    {
+      id: "trade_name",
+      header: "Trade Name",
+      cell: (c) => <span className="font-medium">{c.trade_name}</span>,
+      sortAccessor: (c) => c.trade_name,
+    },
+    {
+      id: "gstin",
+      header: "GSTIN",
+      cell: (c) => <span className="font-mono text-sm">{c.gstin || "-"}</span>,
+      sortAccessor: (c) => c.gstin || "",
+    },
+    {
+      id: "state",
+      header: "State",
+      cell: (c) => c.billing_state_name || "-",
+      sortAccessor: (c) => c.billing_state_name || "",
+      hideOnMobile: true,
+    },
+    {
+      id: "type",
+      header: "Type",
+      cell: (c) => <span className="capitalize">{c.customer_type}</span>,
+      sortAccessor: (c) => c.customer_type,
+    },
+    {
+      id: "mobile",
+      header: "Mobile",
+      cell: (c) => c.mobile || "-",
+      sortAccessor: (c) => c.mobile || "",
+    },
+    {
+      id: "actions",
+      header: <span className="sr-only">Actions</span>,
+      className: "text-right w-[1%] whitespace-nowrap",
+      cell: (c) => (
+        <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); openEdit(c); }}>
+          <Pencil className="mr-1 h-3.5 w-3.5" /> Edit
+        </Button>
+      ),
+      hideOnMobile: true,
+    },
+  ];
 
   if (!selectedCompany) return <p className="text-muted-foreground">Please select a company first.</p>;
 
@@ -397,51 +441,45 @@ export default function Customers() {
         </>}
       />
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input className="pl-9" placeholder="Search by name, GSTIN, or mobile..." value={search} onChange={(e) => setSearch(e.target.value)} />
-      </div>
-
-      <Card>
-        <CardContent className="p-0 overflow-x-auto">
-          <Table className="min-w-[860px]">
-            <TableHeader className="bg-muted/40">
-              <TableRow>
-                <TableHead>Trade Name</TableHead>
-                <TableHead>GSTIN</TableHead>
-                <TableHead>State</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Mobile</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={6} className="p-0">
-                  <EmptyState
-                    icon={Users}
-                    title="No customers found"
-                    description={search ? "Try a different search term." : "Add your first customer to start invoicing."}
-                  />
-                </TableCell></TableRow>
-              ) : (
-                filtered.map((c) => (
-                  <TableRow key={c.id} className="even:bg-muted/30 hover:bg-accent/60">
-                    <TableCell className="font-medium">{c.trade_name}</TableCell>
-                    <TableCell className="font-mono text-sm">{c.gstin || "-"}</TableCell>
-                    <TableCell>{c.billing_state_name || "-"}</TableCell>
-                    <TableCell className="capitalize">{c.customer_type}</TableCell>
-                    <TableCell>{c.mobile || "-"}</TableCell>
-                    <TableCell className="text-right">
-                      <Button size="sm" variant="outline" onClick={() => openEdit(c)}><Pencil className="mr-1 h-3.5 w-3.5" /> Edit</Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      <DataTable
+        data={visibleCustomers}
+        columns={columns}
+        rowKey={(c) => c.id}
+        onRowClick={(c) => openEdit(c)}
+        searchPlaceholder="Search by name, GSTIN, or mobile..."
+        searchAccessor={(c) =>
+          `${c.trade_name} ${c.gstin || ""} ${c.mobile || ""} ${c.billing_state_name || ""}`
+        }
+        filters={[
+          {
+            id: "type",
+            label: "Type",
+            value: typeFilter,
+            onChange: setTypeFilter,
+            options: [
+              { value: "all", label: "All types" },
+              { value: "registered", label: "Registered" },
+              { value: "unregistered", label: "Unregistered" },
+              { value: "export", label: "Export" },
+              { value: "sez", label: "SEZ" },
+            ],
+          },
+        ]}
+        initialSort={{ columnId: "trade_name", direction: "asc" }}
+        empty={{
+          icon: Users,
+          title: "No customers found",
+          description: "Add your first customer or adjust your filters.",
+        }}
+        mobileTitle={(c) => c.trade_name}
+        mobileSubtitle={(c) => c.gstin || c.billing_state_name || c.mobile || "—"}
+        mobileAside={(c) => (
+          <span className="rounded-md bg-muted px-2 py-0.5 text-[11px] font-medium capitalize text-muted-foreground">
+            {c.customer_type}
+          </span>
+        )}
+        minWidth={860}
+      />
     </div>
   );
 }

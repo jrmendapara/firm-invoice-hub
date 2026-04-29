@@ -1,20 +1,17 @@
-import { ChangeEvent, useEffect, useRef, useState } from "react";
+import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/contexts/CompanyContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatINR, formatDate, getCurrentFinancialYear, INDIAN_STATES, numberToWordsINR } from "@/lib/indian-states";
-import { Pencil, Plus, Search, Trash2, Upload } from "lucide-react";
+import { Pencil, Plus, Trash2, Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import * as XLSX from "xlsx";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { EmptyState } from "@/components/common/EmptyState";
 import { PageHeader } from "@/components/common/PageHeader";
 import { FileText } from "lucide-react";
+import { DataTable, DataTableColumn } from "@/components/common/DataTable";
 
 export default function Invoices() {
   const { selectedCompany } = useCompany();
@@ -22,7 +19,7 @@ export default function Invoices() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [invoices, setInvoices] = useState<any[]>([]);
-  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const importInputRef = useRef<HTMLInputElement | null>(null);
 
   const fetchInvoices = async () => {
@@ -155,9 +152,92 @@ export default function Invoices() {
     }
   };
 
-  const filtered = invoices.filter(
-    (i) => i.invoice_number.toLowerCase().includes(search.toLowerCase()) || (i.customers?.trade_name || "").toLowerCase().includes(search.toLowerCase())
+  const visibleInvoices = useMemo(
+    () =>
+      statusFilter === "all"
+        ? invoices
+        : invoices.filter((i) => i.status === statusFilter),
+    [invoices, statusFilter],
   );
+
+  const columns: DataTableColumn<any>[] = [
+    {
+      id: "invoice_number",
+      header: "Invoice #",
+      cell: (i) => <span className="font-medium">{i.invoice_number}</span>,
+      sortAccessor: (i) => i.invoice_number,
+    },
+    {
+      id: "invoice_date",
+      header: "Date",
+      cell: (i) => formatDate(i.invoice_date),
+      sortAccessor: (i) => i.invoice_date,
+    },
+    {
+      id: "customer",
+      header: "Customer",
+      cell: (i) => i.customers?.trade_name || "-",
+      sortAccessor: (i) => i.customers?.trade_name || "",
+    },
+    {
+      id: "gstin",
+      header: "GSTIN",
+      cell: (i) => <span className="font-mono text-sm">{i.customers?.gstin || "-"}</span>,
+      hideOnMobile: true,
+    },
+    {
+      id: "taxable",
+      header: "Taxable",
+      className: "text-right",
+      cell: (i) => <span className="tabular-nums">{formatINR(i.total_taxable_value)}</span>,
+      sortAccessor: (i) => Number(i.total_taxable_value || 0),
+      hideOnMobile: true,
+    },
+    {
+      id: "tax",
+      header: "Tax",
+      className: "text-right",
+      cell: (i) => <span className="tabular-nums">{formatINR(i.total_tax)}</span>,
+      sortAccessor: (i) => Number(i.total_tax || 0),
+      hideOnMobile: true,
+    },
+    {
+      id: "total",
+      header: "Total",
+      className: "text-right",
+      cell: (i) => <span className="font-medium tabular-nums">{formatINR(i.total_amount)}</span>,
+      sortAccessor: (i) => Number(i.total_amount || 0),
+      hideOnMobile: true,
+    },
+    {
+      id: "status",
+      header: "Status",
+      cell: (i) => <StatusBadge status={i.status} />,
+      sortAccessor: (i) => i.status,
+      hideOnMobile: true,
+    },
+    {
+      id: "actions",
+      header: <span className="sr-only">Actions</span>,
+      className: "text-right w-[1%] whitespace-nowrap",
+      cell: (i) => (
+        <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+          <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => navigate(`/invoices/${i.id}/edit`)}>
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button
+            size="icon"
+            variant="destructive"
+            className="h-8 w-8"
+            onClick={() => handleDeleteInvoice(i.id, i.invoice_number)}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      ),
+      hideOnMobile: true,
+    },
+  ];
 
   if (!selectedCompany) return <p className="text-muted-foreground">Please select a company first.</p>;
 
@@ -179,76 +259,50 @@ export default function Invoices() {
         }
       />
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input className="pl-9" placeholder="Search by invoice number or customer..." value={search} onChange={(e) => setSearch(e.target.value)} />
-      </div>
-
-      <Card>
-        <CardContent className="p-0 overflow-x-auto">
-          <Table className="min-w-[980px]">
-            <TableHeader className="bg-muted/40">
-              <TableRow>
-                <TableHead>Invoice #</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead>GSTIN</TableHead>
-                <TableHead className="text-right">Taxable</TableHead>
-                <TableHead className="text-right">Tax</TableHead>
-                <TableHead className="text-right">Total</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={9} className="p-0">
-                    <EmptyState
-                      icon={FileText}
-                      title="No invoices found"
-                      description={search ? "Try a different search term." : "Create your first invoice to get started."}
-                      action={!search ? (
-                        <Button asChild><Link to="/invoices/new"><Plus className="mr-2 h-4 w-4" />New Invoice</Link></Button>
-                      ) : undefined}
-                    />
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filtered.map((inv) => (
-                  <TableRow key={inv.id} className="cursor-pointer even:bg-muted/30 hover:bg-accent/60" onClick={() => navigate(`/invoices/${inv.id}`)}>
-                    <TableCell className="font-medium">{inv.invoice_number}</TableCell>
-                    <TableCell>{formatDate(inv.invoice_date)}</TableCell>
-                    <TableCell>{inv.customers?.trade_name || "-"}</TableCell>
-                    <TableCell className="font-mono text-sm">{inv.customers?.gstin || "-"}</TableCell>
-                    <TableCell className="text-right tabular-nums">{formatINR(inv.total_taxable_value)}</TableCell>
-                    <TableCell className="text-right tabular-nums">{formatINR(inv.total_tax)}</TableCell>
-                    <TableCell className="text-right font-medium tabular-nums">{formatINR(inv.total_amount)}</TableCell>
-                    <TableCell>
-                      <StatusBadge status={inv.status} />
-                    </TableCell>
-                    <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex justify-end gap-1">
-                        <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => navigate(`/invoices/${inv.id}/edit`)}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="destructive"
-                          className="h-8 w-8"
-                          onClick={() => handleDeleteInvoice(inv.id, inv.invoice_number)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      <DataTable
+        data={visibleInvoices}
+        columns={columns}
+        rowKey={(i) => i.id}
+        onRowClick={(i) => navigate(`/invoices/${i.id}`)}
+        searchPlaceholder="Search by invoice number or customer..."
+        searchAccessor={(i) =>
+          `${i.invoice_number} ${i.customers?.trade_name || ""} ${i.customers?.gstin || ""}`
+        }
+        filters={[
+          {
+            id: "status",
+            label: "Status",
+            value: statusFilter,
+            onChange: setStatusFilter,
+            options: [
+              { value: "all", label: "All statuses" },
+              { value: "final", label: "Final" },
+              { value: "draft", label: "Draft" },
+              { value: "cancelled", label: "Cancelled" },
+            ],
+          },
+        ]}
+        initialSort={{ columnId: "invoice_date", direction: "desc" }}
+        empty={{
+          icon: FileText,
+          title: "No invoices found",
+          description: "Create an invoice or change the filters above.",
+          action: (
+            <Button asChild>
+              <Link to="/invoices/new"><Plus className="mr-2 h-4 w-4" />New Invoice</Link>
+            </Button>
+          ),
+        }}
+        mobileTitle={(i) => i.invoice_number}
+        mobileSubtitle={(i) => `${i.customers?.trade_name || "—"} • ${formatDate(i.invoice_date)}`}
+        mobileAside={(i) => (
+          <div className="flex flex-col items-end gap-1.5">
+            <span className="font-semibold tabular-nums">{formatINR(i.total_amount)}</span>
+            <StatusBadge status={i.status} />
+          </div>
+        )}
+        minWidth={980}
+      />
     </div>
   );
 }
